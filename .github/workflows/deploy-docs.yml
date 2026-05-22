@@ -37,8 +37,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
-          cache-dependency-path: '' # No package.json is needed
 
       - name: Install VitePress globally
         run: npm install -g vitepress
