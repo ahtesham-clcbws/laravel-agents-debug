@@ -510,10 +510,16 @@ class DebugActivityLogger
             $log[] = "";
             $log[] = "- SIDE-EFFECT EVENTS & JOBS:";
             foreach ($events as $e) {
-                $log[] = "  * [Event] {$e}";
+                if (is_array($e)) {
+                    $payloadStr = $e['payload'] ? ' ' . json_encode($e['payload'], JSON_UNESCAPED_SLASHES) : '';
+                    $log[] = "  * [Event] {$e['name']}{$payloadStr}";
+                } else {
+                    $log[] = "  * [Event] {$e}";
+                }
             }
             foreach ($jobs as $j) {
-                $log[] = "  * [Job] {$j['name']} (Dispatched to '{$j['queue']}' queue)";
+                $payloadStr = (!empty($j['payload'])) ? ' ' . json_encode($j['payload'], JSON_UNESCAPED_SLASHES) : '';
+                $log[] = "  * [Job] {$j['name']} (Dispatched to '{$j['queue']}' queue){$payloadStr}";
             }
         }
 
