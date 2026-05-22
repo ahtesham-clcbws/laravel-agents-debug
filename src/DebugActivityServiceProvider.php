@@ -11,6 +11,7 @@ use LaravelAgentDebugger\Commands\DebugOffCommand;
 use LaravelAgentDebugger\Commands\DebugStatusCommand;
 use LaravelAgentDebugger\Commands\DebugCleanCommand;
 use LaravelAgentDebugger\Commands\DebugTailCommand;
+use LaravelAgentDebugger\Commands\DebugRecordCommand;
 use LaravelAgentDebugger\Middleware\DebugActivityLogger;
 use LaravelAgentDebugger\Middleware\ViewportBorderInjector;
 
@@ -51,6 +52,7 @@ class DebugActivityServiceProvider extends ServiceProvider
                 DebugStatusCommand::class,
                 DebugCleanCommand::class,
                 DebugTailCommand::class,
+                DebugRecordCommand::class,
             ]);
 
             // Auto-clean logs on local serve startup
@@ -69,6 +71,26 @@ class DebugActivityServiceProvider extends ServiceProvider
 
         $this->app['router']->get('_agent_debug/logs', function () {
             return response()->json($this->getParsedLogs());
+        });
+
+        $this->app['router']->post('_agent_debug/artisan/{command}', function (string $command) {
+            try {
+                if ($command === 'cache-clear') {
+                    \Illuminate\Support\Facades\Artisan::call('cache:clear');
+                    return response()->json(['success' => true, 'message' => 'Cache cleared successfully!']);
+                }
+                if ($command === 'route-clear') {
+                    \Illuminate\Support\Facades\Artisan::call('route:clear');
+                    return response()->json(['success' => true, 'message' => 'Route cache cleared successfully!']);
+                }
+                if ($command === 'debug-clean') {
+                    \Illuminate\Support\Facades\Artisan::call('agent:debug-clean');
+                    return response()->json(['success' => true, 'message' => 'Agent request logs cleared successfully!']);
+                }
+            } catch (\Throwable $e) {
+                return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+            }
+            return response()->json(['success' => false, 'message' => 'Command not found.'], 404);
         });
 
         // Programmatically register the Global HTTP Middleware
@@ -270,6 +292,60 @@ class DebugActivityServiceProvider extends ServiceProvider
                 }
             }
 
+            $debugTag = 'default';
+            if (preg_match('/debug_tag:\s*"(.*?)"/', $block, $m)) $debugTag = $m[1];
+
+            $livewireData = null;
+            if (preg_match('/- LIVEWIRE STATE DUMP:\s*\* Component:\s*(.*?)\s*\* Payload Link:\s*(file:\/\/.*?\.json)/', $block, $m)) {
+                $realPath = str_replace('file://', '', $m[2]);
+                if (file_exists($realPath)) {
+                    $livewireData = [
+                        'component' => $m[1],
+                        'payload' => json_decode(file_get_contents($realPath), true)
+                    ];
+                }
+            }
+
+            $localizationInfo = null;
+            if (preg_match('/🌍 REQUEST LOCALIZATION & LANGUAGE PROFILE:\s*\* Primary Locale:\s*(.*?)\s*\* Accept-Language:\s*(.*?)\s*\* User-Agent:\s*(.*?)\s*\* Client IP Address:\s*(.*?)\s*\* App Timezone:\s*(.*?)(?=\n|$)/', $block, $m)) {
+                $localizationInfo = [
+                    'primary_locale' => $m[1],
+                    'accept_language' => $m[2],
+                    'user_agent' => $m[3],
+                    'ip_address' => $m[4],
+                    'timezone' => $m[5]
+                ];
+            }
+
+            $composerVulnerabilities = [];
+            if (preg_match('/🩹 COMPOSER SECURITY DEPENDENCY ADVISORIES:\s*((?:\s*\*.*?\n?)*)/', $block, $m)) {
+                $lines = explode("\n", trim($m[1]));
+                $currentVuln = null;
+                foreach ($lines as $line) {
+                    $line = trim($line);
+                    if (empty($line)) continue;
+                    if (preg_match('/^\*\s*\[(.*?)\]\s*Package\s*\'(.*?)\'\s*\(Installed:\s*(.*?)\)\s*is vulnerable to:\s*\'(.*?)\'/', $line, $lm)) {
+                        if ($currentVuln) {
+                            $composerVulnerabilities[] = $currentVuln;
+                        }
+                        $currentVuln = [
+                            'cve' => $lm[1],
+                            'package' => $lm[2],
+                            'installed' => $lm[3],
+                            'title' => $lm[4],
+                            'recommendation' => ''
+                        ];
+                    } elseif (preg_match('/👉 Recommendation:\s*(.*)/', $line, $lm)) {
+                        if ($currentVuln) {
+                            $currentVuln['recommendation'] = $lm[1];
+                        }
+                    }
+                }
+                if ($currentVuln) {
+                    $composerVulnerabilities[] = $currentVuln;
+                }
+            }
+
             $parsed[] = [
                 'timestamp' => $timestamp,
                 'method' => $method,
@@ -290,6 +366,10 @@ class DebugActivityServiceProvider extends ServiceProvider
                 'csrf_reason' => $csrfReason,
                 'env_drifts' => $envDrifts,
                 'inertia_data' => $inertiaData,
+                'livewire_data' => $livewireData,
+                'debug_tag' => $debugTag,
+                'localization' => $localizationInfo,
+                'composer_vulnerabilities' => $composerVulnerabilities,
                 'raw' => $block
             ];
         }
@@ -348,7 +428,18 @@ class DebugActivityServiceProvider extends ServiceProvider
             <!-- Sidebar: Log Request List -->
             <aside class="w-1/3 border-r border-slate-800 bg-slate-950 flex flex-col">
                 <div class="p-4 border-b border-slate-900 flex space-x-2">
-                    <input type="text" v-model="search" placeholder="Filter by URL, Status, Method..." class="w-full bg-slate-900/60 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-red-500 transition-colors">
+                    <input type="text" v-model="search" placeholder="Filter by URL, Status, Method..." class="flex-1 bg-slate-900/60 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-red-500 transition-colors">
+                    <input type="text" v-model="tagFilter" placeholder="Tag..." class="w-1/4 bg-slate-900/60 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-red-500 transition-colors" title="Filter by Category Tag (?_debug_tag=x)">
+                </div>
+
+                <!-- Interactive Artisan Quick-Console -->
+                <div class="px-4 py-2 border-b border-slate-900 bg-slate-900/40 flex items-center justify-between text-xs">
+                    <span class="font-bold uppercase tracking-wider text-slate-400">⚡ Console Actions</span>
+                    <div class="flex space-x-2">
+                        <button @click="runConsole('cache-clear')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 font-semibold rounded text-slate-300 transition" title="Clear Application Cache">🧹 Cache</button>
+                        <button @click="runConsole('route-clear')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 font-semibold rounded text-slate-300 transition" title="Clear Route Cache">🔀 Route</button>
+                        <button @click="runConsole('debug-clean')" class="px-2 py-1 bg-rose-950/60 hover:bg-rose-900 border border-rose-800 font-semibold rounded text-rose-300 transition" title="Clear Request Logs">🚿 Clean</button>
+                    </div>
                 </div>
 
                 <div class="flex-1 overflow-y-auto divide-y divide-slate-900">
@@ -384,12 +475,16 @@ class DebugActivityServiceProvider extends ServiceProvider
                             <div class="flex items-center space-x-3 mb-1">
                                 <span :class="getMethodClass(selectedLog.method)" class="px-2 py-0.5 text-xs font-bold rounded">{{ selectedLog.method }}</span>
                                 <span :class="getStatusClass(selectedLog.status)" class="px-2 py-0.5 text-xs font-bold rounded">{{ selectedLog.status }}</span>
+                                <span v-if="selectedLog.debug_tag && selectedLog.debug_tag !== 'default'" class="px-2 py-0.5 text-xs font-bold bg-teal-900 border border-teal-700 text-teal-300 rounded">🏷️ {{ selectedLog.debug_tag }}</span>
                                 <h2 class="text-lg font-bold font-mono text-slate-100">{{ selectedLog.url }}</h2>
                             </div>
                             <p class="text-sm text-slate-400 font-mono">{{ selectedLog.timestamp }}</p>
                         </div>
                         
-                        <div class="flex space-x-4">
+                        <div class="flex items-center space-x-4">
+                            <button @click="copyAsCurl(selectedLog)" class="px-3 py-2 bg-slate-900/80 hover:bg-slate-800 border border-slate-800 rounded-lg text-xs font-semibold text-slate-300 flex items-center space-x-1.5 transition" title="Copy request as curl command">
+                                📋 cURL
+                            </button>
                             <div class="bg-slate-900/60 border border-slate-800 rounded-lg p-3 text-center min-w-[80px]">
                                 <div class="text-xs text-slate-500">Duration</div>
                                 <div class="text-lg font-semibold text-orange-400">{{ selectedLog.duration }}<span class="text-xs">ms</span></div>
@@ -442,16 +537,50 @@ class DebugActivityServiceProvider extends ServiceProvider
                         </div>
                     </div>
 
+                    <!-- Composer dependency advisory banner -->
+                    <div v-if="selectedLog.composer_vulnerabilities && selectedLog.composer_vulnerabilities.length > 0" class="mx-6 mt-4 p-4 bg-rose-950/40 border border-rose-800/80 rounded-lg flex items-start space-x-3 text-rose-300">
+                        <span class="text-xl">🩹</span>
+                        <div>
+                            <div class="font-bold text-rose-200">Security Packages Vulnerabilities Detected (Composer Audit)</div>
+                            <div class="text-xs mt-1 space-y-2">
+                                <div v-for="(vuln, vIdx) in selectedLog.composer_vulnerabilities" :key="vIdx">
+                                    • <span class="font-semibold text-rose-100">{{ vuln.package }} ({{ vuln.installed }})</span>: {{ vuln.title }} - <span class="font-mono text-rose-400 font-semibold">{{ vuln.cve }}</span>
+                                    <div class="text-[10px] text-slate-400 mt-0.5">👉 {{ vuln.recommendation }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Tab Switcher -->
-                    <div v-if="selectedLog.inertia_data || (selectedLog.cache_actions && selectedLog.cache_actions.length > 0) || (selectedLog.eloquent_events && selectedLog.eloquent_events.length > 0)" class="px-6 py-2 bg-slate-900/40 border-b border-slate-800 flex space-x-4">
+                    <div v-if="selectedLog.inertia_data || selectedLog.livewire_data || (selectedLog.cache_actions && selectedLog.cache_actions.length > 0) || (selectedLog.eloquent_events && selectedLog.eloquent_events.length > 0)" class="px-6 py-2 bg-slate-900/40 border-b border-slate-800 flex space-x-4">
                         <button @click="activeTab = 'log'" :class="activeTab === 'log' ? 'border-red-500 text-red-400 font-bold' : 'border-transparent text-slate-400 hover:text-slate-200'" class="py-2 px-1 border-b-2 text-sm transition-all duration-150">📜 Execution Log</button>
                         <button v-if="selectedLog.inertia_data" @click="activeTab = 'inertia'" :class="activeTab === 'inertia' ? 'border-red-500 text-red-400 font-bold' : 'border-transparent text-slate-400 hover:text-slate-200'" class="py-2 px-1 border-b-2 text-sm transition-all duration-150">📦 Inertia Properties</button>
+                        <button v-if="selectedLog.livewire_data" @click="activeTab = 'livewire'" :class="activeTab === 'livewire' ? 'border-red-500 text-red-400 font-bold' : 'border-transparent text-slate-400 hover:text-slate-200'" class="py-2 px-1 border-b-2 text-sm transition-all duration-150">🔌 Livewire Properties</button>
                         <button v-if="selectedLog.cache_actions && selectedLog.cache_actions.length > 0" @click="activeTab = 'cache'" :class="activeTab === 'cache' ? 'border-red-500 text-red-400 font-bold' : 'border-transparent text-slate-400 hover:text-slate-200'" class="py-2 px-1 border-b-2 text-sm transition-all duration-150">🗂️ Cache Monitor ({{ selectedLog.cache_actions_count }})</button>
                         <button v-if="selectedLog.eloquent_events && selectedLog.eloquent_events.length > 0" @click="activeTab = 'eloquent'" :class="activeTab === 'eloquent' ? 'border-red-500 text-red-400 font-bold' : 'border-transparent text-slate-400 hover:text-slate-200'" class="py-2 px-1 border-b-2 text-sm transition-all duration-150">🔄 Eloquent Events ({{ selectedLog.eloquent_events_count }})</button>
                     </div>
 
                     <!-- Raw Formatted Output Block -->
                     <div v-if="activeTab === 'log'" class="flex-1 p-6 overflow-auto bg-slate-950/40">
+                        <!-- Request Localization Info Widget -->
+                        <div v-if="selectedLog.localization" class="mb-6 p-4 bg-slate-900/40 border border-slate-800 rounded-lg grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                            <div>
+                                <div class="text-slate-500 font-semibold">🌐 Primary Language</div>
+                                <div class="text-slate-300 font-mono mt-0.5">{{ selectedLog.localization.primary_locale }}</div>
+                            </div>
+                            <div>
+                                <div class="text-slate-500 font-semibold">🕒 App Timezone</div>
+                                <div class="text-slate-300 font-mono mt-0.5">{{ selectedLog.localization.timezone }}</div>
+                            </div>
+                            <div>
+                                <div class="text-slate-500 font-semibold">💻 User IP</div>
+                                <div class="text-slate-300 font-mono mt-0.5">{{ selectedLog.localization.ip_address }}</div>
+                            </div>
+                            <div>
+                                <div class="text-slate-500 font-semibold">📝 Preferred Headers</div>
+                                <div class="text-slate-300 font-mono mt-0.5 truncate" :title="selectedLog.localization.accept_language">{{ selectedLog.localization.accept_language }}</div>
+                            </div>
+                        </div>
                         <pre class="text-sm text-slate-300 leading-relaxed font-mono whitespace-pre-wrap selection:bg-red-500/30 selection:text-white" v-html="highlightedContent"></pre>
                     </div>
 
@@ -466,6 +595,21 @@ class DebugActivityServiceProvider extends ServiceProvider
                         <div class="border border-slate-800 rounded-lg bg-slate-900/60 p-4">
                             <div class="text-slate-400 font-bold mb-2">View Props Payload:</div>
                             <pre class="text-green-400 font-mono whitespace-pre-wrap select-all">{{ JSON.stringify(selectedLog.inertia_data.props, null, 2) }}</pre>
+                        </div>
+                    </div>
+
+                    <!-- Livewire Properties Tab -->
+                    <div v-if="activeTab === 'livewire' && selectedLog.livewire_data" class="flex-1 p-6 overflow-auto bg-slate-950/40 font-mono text-sm">
+                        <div class="mb-4">
+                            <span class="text-slate-500">Livewire Component:</span>
+                            <span class="ml-2 font-bold text-red-400">{{ selectedLog.livewire_data.component }}</span>
+                        </div>
+                        <div class="border border-slate-800 rounded-lg overflow-hidden bg-slate-950">
+                            <div class="bg-slate-900/60 px-4 py-2 border-b border-slate-800 flex items-center justify-between text-xs text-slate-400">
+                                <span>Hydrated Component State Parameters</span>
+                                <button @click="copyToClipboard(JSON.stringify(selectedLog.livewire_data.payload, null, 2))" class="text-slate-400 hover:text-slate-200">Copy Payload</button>
+                            </div>
+                            <pre class="p-4 text-xs text-slate-300 overflow-x-auto whitespace-pre-wrap leading-relaxed">{{ JSON.stringify(selectedLog.livewire_data.payload, null, 2) }}</pre>
                         </div>
                     </div>
 
@@ -568,6 +712,7 @@ class DebugActivityServiceProvider extends ServiceProvider
                 const logs = ref([]);
                 const selectedLog = ref(null);
                 const search = ref('');
+                const tagFilter = ref('');
                 const isPolling = ref(true);
                 let pollInterval = null;
 
@@ -610,6 +755,50 @@ class DebugActivityServiceProvider extends ServiceProvider
                     }
                 };
 
+                const runConsole = async (command) => {
+                    try {
+                        const res = await fetch(`/_agent_debug/artisan/${command}`, { method: 'POST' });
+                        const data = await res.json();
+                        alert(data.message || 'Artisan command completed successfully!');
+                        fetchLogs();
+                    } catch (e) {
+                        alert(`Error executing artisan console command: ${e}`);
+                    }
+                };
+
+                const copyToClipboard = (text) => {
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(text);
+                    } else {
+                        const el = document.createElement('textarea');
+                        el.value = text;
+                        document.body.appendChild(el);
+                        el.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(el);
+                    }
+                };
+
+                const copyAsCurl = (log) => {
+                    const method = log.method;
+                    const url = log.url;
+                    let cmd = `curl -X ${method} "${window.location.origin}${url}"`;
+                    if (log.raw) {
+                        const lines = log.raw.split("\n");
+                        lines.forEach(line => {
+                            if (line.includes("Accept:") || line.includes("Accept-Language:") || line.includes("User-Agent:")) {
+                                const clean = line.replace(/^\s*\*\s*/, '').trim();
+                                const parts = clean.split(": ");
+                                if (parts.length >= 2) {
+                                    cmd += ` -H "${parts[0]}: ${parts.slice(1).join(': ')}"`;
+                                }
+                            }
+                        });
+                    }
+                    copyToClipboard(cmd);
+                    alert("📋 cURL command copied to clipboard!");
+                };
+
                 onMounted(() => {
                     fetchLogs();
                     startPolling();
@@ -620,38 +809,42 @@ class DebugActivityServiceProvider extends ServiceProvider
                 });
 
                 const filteredLogs = computed(() => {
-                    if (!search.value) return logs.value;
-                    const query = search.value.toLowerCase();
-                    return logs.value.filter(log => 
-                        log.url.toLowerCase().includes(query) || 
-                        log.method.toLowerCase().includes(query) || 
-                        log.status.toString().includes(query)
-                    );
+                    let items = logs.value;
+                    if (search.value) {
+                        const query = search.value.toLowerCase();
+                        items = items.filter(log => 
+                            log.url.toLowerCase().includes(query) || 
+                            log.method.toLowerCase().includes(query) || 
+                            log.status.toString().includes(query)
+                        );
+                    }
+                    if (tagFilter.value) {
+                        const query = tagFilter.value.toLowerCase();
+                        items = items.filter(log => 
+                            log.debug_tag && log.debug_tag.toLowerCase().includes(query)
+                        );
+                    }
+                    return items;
                 });
 
                 const highlightedContent = computed(() => {
                     if (!selectedLog.value) return '';
                     let text = selectedLog.value.raw;
                     
-                    // Safely html escape
                     text = text
                         .replace(/&/g, "&amp;")
                         .replace(/</g, "&lt;")
                         .replace(/>/g, "&gt;");
 
-                    // Highlight warnings and loops
                     text = text.replace(/(⚠️ WARNING:.*)/g, '<span class="text-yellow-400 font-bold bg-yellow-950/40 px-1 py-0.5 rounded border border-yellow-800/40">$1</span>');
                     text = text.replace(/(👉 Solution:.*)/g, '<span class="text-green-400 font-bold bg-green-950/40 px-1 py-0.5 rounded">$1</span>');
 
-                    // Highlight query methods
                     text = text.replace(/(select \* from|insert into|update|delete from)/gi, '<span class="text-green-400 font-semibold">$1</span>');
 
-                    // Highlight transaction commits and rollbacks
                     text = text.replace(/(DB::beginTransaction\(\))/g, '<span class="text-cyan-400 font-bold">$1</span>');
                     text = text.replace(/(DB::commit\(\))/g, '<span class="text-emerald-400 font-bold">$1</span>');
                     text = text.replace(/(DB::rollBack\(\))/g, '<span class="text-rose-400 font-bold">$1</span>');
 
-                    // Highlight execution exception stack logs
                     text = text.replace(/(Class:.*)/g, '<span class="text-rose-400 font-semibold">$1</span>');
                     text = text.replace(/(Message:.*)/g, '<span class="text-rose-300 font-semibold">$1</span>');
                     text = text.replace(/(File:.*)/g, '<span class="text-slate-400 font-mono">$1</span>');
@@ -688,6 +881,7 @@ class DebugActivityServiceProvider extends ServiceProvider
                     logs,
                     selectedLog,
                     search,
+                    tagFilter,
                     isPolling,
                     filteredLogs,
                     highlightedContent,
@@ -696,7 +890,10 @@ class DebugActivityServiceProvider extends ServiceProvider
                     togglePolling,
                     getMethodClass,
                     getStatusClass,
-                    formatTime
+                    formatTime,
+                    runConsole,
+                    copyToClipboard,
+                    copyAsCurl
                 };
             }
         }).mount('#app');

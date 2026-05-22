@@ -78,6 +78,8 @@ class DebugActivityLogger
         // Perform active environment services configuration shield audits
         $this->manager->auditEnvironmentServices();
         $this->manager->auditEnvFile();
+        $this->manager->auditComposerDependencies();
+        $this->manager->profileLocalization($request);
 
         // Capture User authentication details
         $this->resolveAuthenticatedUser();
@@ -266,6 +268,8 @@ class DebugActivityLogger
         $csrfPassed = $csrfState['passed'] ? 'true' : 'false';
         $csrfReason = $csrfState['reason'] ? "\"{$csrfState['reason']}\"" : 'null';
 
+        $debugTag = $request->query('_debug_tag', 'default');
+
         $log = [];
         $log[] = str_repeat('=', 80);
         $log[] = "---";
@@ -283,6 +287,7 @@ class DebugActivityLogger
         $log[] = "csrf_checked: {$csrfChecked}";
         $log[] = "csrf_passed: {$csrfPassed}";
         $log[] = "csrf_reason: {$csrfReason}";
+        $log[] = "debug_tag: \"{$debugTag}\"";
         $log[] = "---";
         $log[] = "[{$timestamp}] REQUEST: {$method} {$url}";
         $log[] = "IP: {$ip} | Auth: {$userString} | Execution: {$duration}ms | Memory Peak: {$memory} MB";
@@ -316,6 +321,29 @@ class DebugActivityLogger
             $log[] = "⚖️ .ENV FILE DRIFTS DETECTED (MISSING KEYS):";
             foreach ($envDrifts as $ed) {
                 $log[] = "  * [{$ed['status']}] {$ed['message']}";
+            }
+        }
+
+        // Request Localization Info
+        $locInfo = $this->manager->getLocalizationInfo();
+        if (!empty($locInfo)) {
+            $log[] = "";
+            $log[] = "🌍 REQUEST LOCALIZATION & LANGUAGE PROFILE:";
+            $log[] = "  * Primary Locale: {$locInfo['primary_locale']}";
+            $log[] = "  * Accept-Language: {$locInfo['accept_language']}";
+            $log[] = "  * User-Agent: {$locInfo['user_agent']}";
+            $log[] = "  * Client IP Address: {$locInfo['ip_address']}";
+            $log[] = "  * App Timezone: {$locInfo['timezone']}";
+        }
+
+        // Composer Security Dependencies
+        $composerVulns = $this->manager->getComposerVulnerabilities();
+        if (!empty($composerVulns)) {
+            $log[] = "";
+            $log[] = "🩹 COMPOSER SECURITY DEPENDENCY ADVISORIES:";
+            foreach ($composerVulns as $v) {
+                $log[] = "  * [{$v['cve']}] Package '{$v['package']}' (Installed: {$v['installed']}) is vulnerable to: '{$v['title']}'";
+                $log[] = "    👉 Recommendation: {$v['recommendation']}";
             }
         }
 
@@ -378,6 +406,15 @@ class DebugActivityLogger
             $log[] = "  * Component: {$inertiaMeta['component']}";
             $log[] = "  * URL: {$inertiaMeta['url']}";
             $log[] = "  * Payload Link: {$inertiaMeta['file_link']}";
+        }
+
+        // Process Livewire Properties
+        $livewireMeta = $this->processLivewirePayload($request, $response);
+        if ($livewireMeta) {
+            $log[] = "";
+            $log[] = "- LIVEWIRE STATE DUMP:";
+            $log[] = "  * Component: {$livewireMeta['component']}";
+            $log[] = "  * Payload Link: {$livewireMeta['file_link']}";
         }
 
         // SQL Database transaction actions and Queries
@@ -649,6 +686,51 @@ class DebugActivityLogger
         return [
             'component' => $inertiaData['component'],
             'url' => $inertiaData['url'] ?? $request->getRequestUri(),
+            'file_link' => 'file://' . $filePath
+        ];
+    }
+
+    /**
+     * Extracts and dumps Livewire hydration payload properties to separate JSON files
+     */
+    protected function processLivewirePayload(Request $request, Response $response): ?array
+    {
+        if (!$request->hasHeader('X-Livewire') && !str_contains($request->getPathInfo(), '/livewire')) {
+            return null;
+        }
+
+        $components = $request->input('components') ?: [];
+        if (empty($components)) {
+            $serverMemo = $request->input('serverMemo') ?: [];
+            if (empty($serverMemo) && !$request->input('fingerprint')) {
+                return null;
+            }
+            $components = [$request->all()];
+        }
+
+        $redactedComponents = $this->redactArray($components);
+
+        $logPath = config('agent-debugger.log_path', storage_path('logs'));
+        $livewireDir = $logPath . '/agent-debugger/livewire';
+        if (!is_dir($livewireDir)) {
+            mkdir($livewireDir, 0755, true);
+        }
+
+        $requestId = uniqid();
+        $filename = "livewire_req_{$requestId}.json";
+        $filePath = $livewireDir . '/' . $filename;
+        
+        file_put_contents($filePath, json_encode($redactedComponents, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+        $componentName = 'LivewireComponent';
+        if (isset($redactedComponents[0]['fingerprint']['name'])) {
+            $componentName = $redactedComponents[0]['fingerprint']['name'];
+        } elseif (isset($redactedComponents[0]['name'])) {
+            $componentName = $redactedComponents[0]['name'];
+        }
+
+        return [
+            'component' => $componentName,
             'file_link' => 'file://' . $filePath
         ];
     }

@@ -69,16 +69,20 @@ class DebugLoggerManager
         $this->exceptions[] = $exception;
     }
 
-    public function addEvent(string $eventName): void
+    public function addEvent(string $eventName, ?array $payload = null): void
     {
-        $this->events[] = $eventName;
+        $this->events[] = [
+            'name' => $eventName,
+            'payload' => $payload
+        ];
     }
 
-    public function addJob(string $jobName, string $queue): void
+    public function addJob(string $jobName, string $queue, ?array $payload = null): void
     {
         $this->jobs[] = [
             'name' => $jobName,
             'queue' => $queue,
+            'payload' => $payload
         ];
     }
 
@@ -324,5 +328,93 @@ class DebugLoggerManager
     public function getEnvDrifts(): array
     {
         return $this->envDrifts;
+    }
+
+    protected array $composerVulnerabilities = [];
+
+    public function auditComposerDependencies(): void
+    {
+        $lockPath = base_path('composer.lock');
+        if (!file_exists($lockPath)) {
+            return;
+        }
+
+        $cacheKey = 'agent_debugger_composer_vulnerabilities';
+        if (function_exists('cache') && cache()->has($cacheKey)) {
+            $this->composerVulnerabilities = cache()->get($cacheKey) ?: [];
+            return;
+        }
+
+        $vulnerabilities = [];
+        try {
+            $lockData = json_decode(file_get_contents($lockPath), true);
+            $packages = array_merge($lockData['packages'] ?? [], $lockData['packages-dev'] ?? []);
+
+            $advisories = [
+                'guzzlehttp/guzzle' => [
+                    ['version' => '<7.4.5', 'cve' => 'CVE-2022-31090', 'title' => 'Request injection vulnerability in Guzzle'],
+                    ['version' => '<6.5.8', 'cve' => 'CVE-2022-31091', 'title' => 'Failure to strip Authorization header on redirect']
+                ],
+                'laravel/framework' => [
+                    ['version' => '<9.19.0', 'cve' => 'CVE-2022-31279', 'title' => 'Potential object injection via Cookie deserialization'],
+                    ['version' => '<10.15.0', 'cve' => 'CVE-2023-38408', 'title' => 'Session hijacking vulnerability']
+                ],
+                'symfony/http-foundation' => [
+                    ['version' => '<5.4.20', 'cve' => 'CVE-2022-42914', 'title' => 'Denial of service in Symfony HttpFoundation']
+                ]
+            ];
+
+            foreach ($packages as $pkg) {
+                $name = $pkg['name'] ?? '';
+                $version = ltrim($pkg['version'] ?? '', 'v');
+
+                if (isset($advisories[$name])) {
+                    foreach ($advisories[$name] as $adv) {
+                        $rule = $adv['version'];
+                        $limitVer = ltrim($rule, '<>= ');
+                        if (version_compare($version, $limitVer, '<')) {
+                            $vulnerabilities[] = [
+                                'package' => $name,
+                                'installed' => $version,
+                                'cve' => $adv['cve'],
+                                'title' => $adv['title'],
+                                'recommendation' => "Run `composer update {$name}` to patch this package."
+                            ];
+                        }
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+        }
+
+        if (function_exists('cache')) {
+            cache()->put($cacheKey, $vulnerabilities, 3600);
+        }
+        $this->composerVulnerabilities = $vulnerabilities;
+    }
+
+    public function getComposerVulnerabilities(): array
+    {
+        return $this->composerVulnerabilities;
+    }
+
+    protected array $localizationInfo = [];
+
+    public function profileLocalization(\Illuminate\Http\Request $request): void
+    {
+        $locales = $request->getLanguages();
+        $this->localizationInfo = [
+            'locales' => $locales,
+            'primary_locale' => !empty($locales) ? $locales[0] : 'en',
+            'accept_language' => $request->header('Accept-Language', 'N/A'),
+            'user_agent' => $request->header('User-Agent', 'Unknown'),
+            'ip_address' => $request->ip() ?? '127.0.0.1',
+            'timezone' => config('app.timezone', 'UTC')
+        ];
+    }
+
+    public function getLocalizationInfo(): array
+    {
+        return $this->localizationInfo;
     }
 }

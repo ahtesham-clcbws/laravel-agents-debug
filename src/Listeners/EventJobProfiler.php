@@ -17,28 +17,39 @@ class EventJobProfiler
         $this->manager = $manager;
     }
 
-    /**
-     * Subscribe to events and queue dispatch pipelines
-     */
     public function subscribe(): void
     {
         // Listen to all custom application events
         Event::listen('*', function ($eventName, $data) {
-            $this->logEvent($eventName);
+            $this->logEvent($eventName, $data);
         });
 
         // Listen to background jobs queued
         Event::listen(JobQueued::class, function (JobQueued $event) {
             $jobName = is_string($event->job) ? $event->job : get_class($event->job);
             $queue = $event->connectionName . ':' . ($event->queue ?? 'default');
-            $this->manager->addJob($jobName, $queue);
+            
+            $payload = null;
+            if (is_object($event->job)) {
+                $payload = [];
+                foreach (get_object_vars($event->job) as $key => $val) {
+                    if (is_object($val)) {
+                        $payload[$key] = get_class($val);
+                    } elseif (is_array($val)) {
+                        $payload[$key] = '[Array]';
+                    } else {
+                        $payload[$key] = $val;
+                    }
+                }
+            }
+            $this->manager->addJob($jobName, $queue, $payload);
         });
     }
 
     /**
      * Filters and records custom dispatched events
      */
-    protected function logEvent(string $eventName): void
+    protected function logEvent(string $eventName, $data): void
     {
         // Exclude typical core framework events to reduce logging noise
         if (
@@ -51,6 +62,20 @@ class EventJobProfiler
             return;
         }
 
-        $this->manager->addEvent($eventName);
+        $payload = null;
+        if (is_array($data)) {
+            $payload = [];
+            foreach ($data as $k => $v) {
+                if (is_object($v)) {
+                    $payload[$k] = get_class($v);
+                } elseif (is_array($v)) {
+                    $payload[$k] = '[Array]';
+                } else {
+                    $payload[$k] = $v;
+                }
+            }
+        }
+
+        $this->manager->addEvent($eventName, $payload);
     }
 }
