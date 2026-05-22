@@ -186,6 +186,9 @@ class DebugActivityServiceProvider extends ServiceProvider
             $cacheActionsCount = 0;
             if (preg_match('/cache_actions_count:\s*(\d+)/', $block, $m)) $cacheActionsCount = (int)$m[1];
 
+            $eloquentEventsCount = 0;
+            if (preg_match('/eloquent_events_count:\s*(\d+)/', $block, $m)) $eloquentEventsCount = (int)$m[1];
+
             $inertiaData = null;
             if (preg_match('/Payload Link:\s*(file:\/\/.*?\.json)/', $block, $m)) {
                 $realPath = str_replace('file://', '', $m[1]);
@@ -211,6 +214,37 @@ class DebugActivityServiceProvider extends ServiceProvider
                 }
             }
 
+            $eloquentEvents = [];
+            if (preg_match('/- ELOQUENT MODEL LIFECYCLE EVENTS:\s*((?:\s*\*.*?\n?)*)/', $block, $m)) {
+                $lines = explode("\n", trim($m[1]));
+                foreach ($lines as $line) {
+                    $line = trim($line);
+                    if (empty($line)) continue;
+                    if (preg_match('/^\*\s*\[Model Hook:\s*(.*?)\]\s*(.*?)(?:\s*\(ID:\s*(.*?)\))?$/', $line, $lm)) {
+                        $eloquentEvents[] = [
+                            'event' => $lm[1],
+                            'model' => $lm[2],
+                            'id' => isset($lm[3]) ? $lm[3] : null
+                        ];
+                    }
+                }
+            }
+
+            $envWarnings = [];
+            if (preg_match('/🚨 CONFIGURATION SHIELD - ACTIVE LOCAL SERVICES OFFLINE:\s*((?:\s*\*.*?\n?)*)/', $block, $m)) {
+                $lines = explode("\n", trim($m[1]));
+                foreach ($lines as $line) {
+                    $line = trim($line);
+                    if (empty($line)) continue;
+                    if (preg_match('/^\*\s*\[(.*?)\]\s*(.*)/', $line, $lm)) {
+                        $envWarnings[] = [
+                            'service' => $lm[1],
+                            'message' => $lm[2]
+                        ];
+                    }
+                }
+            }
+
             $parsed[] = [
                 'timestamp' => $timestamp,
                 'method' => $method,
@@ -223,6 +257,9 @@ class DebugActivityServiceProvider extends ServiceProvider
                 'errors_count' => $errorsCount,
                 'cache_actions_count' => $cacheActionsCount,
                 'cache_actions' => $cacheActions,
+                'eloquent_events_count' => $eloquentEventsCount,
+                'eloquent_events' => $eloquentEvents,
+                'env_warnings' => $envWarnings,
                 'inertia_data' => $inertiaData,
                 'raw' => $block
             ];
@@ -339,11 +376,25 @@ class DebugActivityServiceProvider extends ServiceProvider
                         </div>
                     </div>
 
+                    <!-- Configuration Shield Warnings Alert Banner -->
+                    <div v-if="selectedLog.env_warnings && selectedLog.env_warnings.length > 0" class="mx-6 mt-4 p-4 bg-rose-950/40 border border-rose-800/80 rounded-lg flex items-start space-x-3 text-rose-300">
+                        <span class="text-xl">🚨</span>
+                        <div>
+                            <div class="font-bold text-rose-200">Dev Services Offline (Configuration Shield Alert)</div>
+                            <div class="text-xs mt-1 space-y-1">
+                                <div v-for="(warning, wIdx) in selectedLog.env_warnings" :key="wIdx">
+                                    • <span class="font-semibold text-rose-100">[{{ warning.service }}]</span> {{ warning.message }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Tab Switcher -->
-                    <div v-if="selectedLog.inertia_data || (selectedLog.cache_actions && selectedLog.cache_actions.length > 0)" class="px-6 py-2 bg-slate-900/40 border-b border-slate-800 flex space-x-4">
+                    <div v-if="selectedLog.inertia_data || (selectedLog.cache_actions && selectedLog.cache_actions.length > 0) || (selectedLog.eloquent_events && selectedLog.eloquent_events.length > 0)" class="px-6 py-2 bg-slate-900/40 border-b border-slate-800 flex space-x-4">
                         <button @click="activeTab = 'log'" :class="activeTab === 'log' ? 'border-red-500 text-red-400 font-bold' : 'border-transparent text-slate-400 hover:text-slate-200'" class="py-2 px-1 border-b-2 text-sm transition-all duration-150">📜 Execution Log</button>
                         <button v-if="selectedLog.inertia_data" @click="activeTab = 'inertia'" :class="activeTab === 'inertia' ? 'border-red-500 text-red-400 font-bold' : 'border-transparent text-slate-400 hover:text-slate-200'" class="py-2 px-1 border-b-2 text-sm transition-all duration-150">📦 Inertia Properties</button>
                         <button v-if="selectedLog.cache_actions && selectedLog.cache_actions.length > 0" @click="activeTab = 'cache'" :class="activeTab === 'cache' ? 'border-red-500 text-red-400 font-bold' : 'border-transparent text-slate-400 hover:text-slate-200'" class="py-2 px-1 border-b-2 text-sm transition-all duration-150">🗂️ Cache Monitor ({{ selectedLog.cache_actions_count }})</button>
+                        <button v-if="selectedLog.eloquent_events && selectedLog.eloquent_events.length > 0" @click="activeTab = 'eloquent'" :class="activeTab === 'eloquent' ? 'border-red-500 text-red-400 font-bold' : 'border-transparent text-slate-400 hover:text-slate-200'" class="py-2 px-1 border-b-2 text-sm transition-all duration-150">🔄 Eloquent Events ({{ selectedLog.eloquent_events_count }})</button>
                     </div>
 
                     <!-- Raw Formatted Output Block -->
@@ -409,6 +460,38 @@ class DebugActivityServiceProvider extends ServiceProvider
                                         <td class="px-4 py-3 text-slate-200 break-all select-all font-bold">{{ action.key }}</td>
                                         <td class="px-4 py-3 text-right text-slate-400">{{ action.size ? action.size + ' B' : 'N/A' }}</td>
                                         <td class="px-4 py-3 text-right text-slate-400">{{ action.ttl ? action.ttl + 's' : 'N/A' }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Eloquent Lifecycle Tab -->
+                    <div v-if="activeTab === 'eloquent' && selectedLog.eloquent_events && selectedLog.eloquent_events.length > 0" class="flex-1 p-6 overflow-auto bg-slate-950/40 font-mono text-sm">
+                        <h3 class="text-base font-bold text-slate-200 mb-4 flex items-center">
+                            <span>🔄 Eloquent Model Lifecycle & Observer Event Tracker</span>
+                        </h3>
+
+                        <div class="border border-slate-800 rounded-lg overflow-hidden bg-slate-900/20">
+                            <table class="w-full text-left text-xs font-mono">
+                                <thead class="bg-slate-900/60 text-slate-400 uppercase font-bold border-b border-slate-800">
+                                    <tr>
+                                        <th class="px-4 py-3">Lifecycle Event</th>
+                                        <th class="px-4 py-3">Eloquent Model</th>
+                                        <th class="px-4 py-3 text-right">Primary Key (ID)</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-800/60">
+                                    <tr v-for="(ee, index) in selectedLog.eloquent_events" :key="index" class="hover:bg-slate-900/20 transition-colors">
+                                        <td class="px-4 py-3">
+                                            <span :class="{
+                                                'bg-emerald-950/60 text-emerald-400 border-emerald-800/40': ['creating', 'created', 'saving', 'saved'].includes(ee.event),
+                                                'bg-cyan-950/60 text-cyan-400 border-cyan-800/40': ['updating', 'updated'].includes(ee.event),
+                                                'bg-rose-950/60 text-rose-400 border-rose-800/40': ['deleting', 'deleted'].includes(ee.event)
+                                            }" class="px-2 py-0.5 rounded text-[10px] font-bold border">{{ ee.event.toUpperCase() }}</span>
+                                        </td>
+                                        <td class="px-4 py-3 text-slate-200 break-all select-all font-bold">{{ ee.model }}</td>
+                                        <td class="px-4 py-3 text-right text-slate-400 font-semibold">{{ ee.id || 'N/A' }}</td>
                                     </tr>
                                 </tbody>
                             </table>

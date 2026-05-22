@@ -204,4 +204,64 @@ class DebugLoggerManager
     {
         return $this->cacheActions;
     }
+
+    protected array $eloquentEvents = [];
+
+    public function addEloquentEvent(array $event): void
+    {
+        $this->eloquentEvents[] = $event;
+    }
+
+    public function getEloquentEvents(): array
+    {
+        return $this->eloquentEvents;
+    }
+
+    protected array $environmentWarnings = [];
+
+    public function auditEnvironmentServices(): void
+    {
+        // 1. Check Redis queue connection
+        if (config('queue.default') === 'redis') {
+            $host = config('database.redis.default.host', '127.0.0.1');
+            $port = (int)config('database.redis.default.port', 6379);
+            if (!$this->isPortListening($host, $port)) {
+                $this->environmentWarnings[] = [
+                    'service' => 'Redis (Queue)',
+                    'message' => "Redis host '{$host}:{$port}' is unreachable but QUEUE_CONNECTION is set to 'redis'."
+                ];
+            }
+        }
+
+        // 2. Check SMTP mail connection
+        if (config('mail.default') === 'smtp') {
+            $host = config('mail.mailers.smtp.host', '127.0.0.1');
+            $port = (int)config('mail.mailers.smtp.port', 1025);
+            if (!$this->isPortListening($host, $port)) {
+                $this->environmentWarnings[] = [
+                    'service' => 'SMTP (Mailer)',
+                    'message' => "SMTP mailer '{$host}:{$port}' is offline but MAIL_MAILER is configured to 'smtp'."
+                ];
+            }
+        }
+    }
+
+    protected function isPortListening(string $host, int $port): bool
+    {
+        try {
+            $fp = @fsockopen($host, $port, $errno, $errstr, 0.1);
+            if ($fp) {
+                fclose($fp);
+                return true;
+            }
+        } catch (\Throwable $e) {
+            // Ignore socket exceptions
+        }
+        return false;
+    }
+
+    public function getEnvironmentWarnings(): array
+    {
+        return $this->environmentWarnings;
+    }
 }

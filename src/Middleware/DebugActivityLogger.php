@@ -19,6 +19,7 @@ use LaravelAgentDebugger\Listeners\AuthorizationProfiler;
 use LaravelAgentDebugger\Listeners\SessionStateProfiler;
 use LaravelAgentDebugger\Listeners\EnvironmentTracker;
 use LaravelAgentDebugger\Listeners\CacheProfiler;
+use LaravelAgentDebugger\Listeners\EloquentProfiler;
 
 class DebugActivityLogger
 {
@@ -33,6 +34,7 @@ class DebugActivityLogger
     protected SessionStateProfiler $sessionStateProfiler;
     protected EnvironmentTracker $environmentTracker;
     protected CacheProfiler $cacheProfiler;
+    protected EloquentProfiler $eloquentProfiler;
 
     public function __construct(DebugLoggerManager $manager)
     {
@@ -47,6 +49,7 @@ class DebugActivityLogger
         $this->sessionStateProfiler = new SessionStateProfiler($manager);
         $this->environmentTracker = new EnvironmentTracker($manager);
         $this->cacheProfiler = new CacheProfiler($manager);
+        $this->eloquentProfiler = new EloquentProfiler($manager);
     }
 
     /**
@@ -70,6 +73,10 @@ class DebugActivityLogger
         $this->httpClientProfiler->subscribe();
         $this->authorizationProfiler->subscribe();
         $this->cacheProfiler->subscribe();
+        $this->eloquentProfiler->subscribe();
+
+        // Perform active environment services configuration shield audits
+        $this->manager->auditEnvironmentServices();
 
         // Capture User authentication details
         $this->resolveAuthenticatedUser();
@@ -251,6 +258,7 @@ class DebugActivityLogger
         $queriesCount = count($this->manager->getQueries());
         $errorsCount = count($this->manager->getExceptions());
         $cacheActionsCount = count($this->manager->getCacheActions());
+        $eloquentEventsCount = count($this->manager->getEloquentEvents());
 
         $log = [];
         $log[] = str_repeat('=', 80);
@@ -265,6 +273,7 @@ class DebugActivityLogger
         $log[] = "queries_count: {$queriesCount}";
         $log[] = "errors_count: {$errorsCount}";
         $log[] = "cache_actions_count: {$cacheActionsCount}";
+        $log[] = "eloquent_events_count: {$eloquentEventsCount}";
         $log[] = "---";
         $log[] = "[{$timestamp}] REQUEST: {$method} {$url}";
         $log[] = "IP: {$ip} | Auth: {$userString} | Execution: {$duration}ms | Memory Peak: {$memory} MB";
@@ -278,6 +287,16 @@ class DebugActivityLogger
             $log[] = "⚠️ WARNING: LOCAL ENVIRONMENT CONFIGURATION DRIFT DETECTED!";
             foreach ($drifts as $key => $drift) {
                 $log[] = "  - {$key} changed from '{$drift['old']}' to '{$drift['new']}'";
+            }
+        }
+
+        // Configuration Shield Warnings
+        $warnings = $this->manager->getEnvironmentWarnings();
+        if (!empty($warnings)) {
+            $log[] = "";
+            $log[] = "🚨 CONFIGURATION SHIELD - ACTIVE LOCAL SERVICES OFFLINE:";
+            foreach ($warnings as $w) {
+                $log[] = "  * [{$w['service']}] {$w['message']}";
             }
         }
 
@@ -413,6 +432,17 @@ class DebugActivityLogger
                 $sizeStr = $action['size'] !== null ? " ({$action['size']} bytes)" : '';
                 $ttlStr = $action['ttl'] !== null ? " [TTL: {$action['ttl']}s]" : '';
                 $log[] = "  * [{$action['type']}] Key: '{$action['key']}'{$sizeStr}{$ttlStr}";
+            }
+        }
+
+        // Eloquent Model Lifecycle Events
+        $eloquentEvents = $this->manager->getEloquentEvents();
+        if (!empty($eloquentEvents)) {
+            $log[] = "";
+            $log[] = "- ELOQUENT MODEL LIFECYCLE EVENTS:";
+            foreach ($eloquentEvents as $ee) {
+                $idStr = $ee['id'] !== null ? " (ID: {$ee['id']})" : '';
+                $log[] = "  * [Model Hook: {$ee['event']}] {$ee['model']}{$idStr}";
             }
         }
 
