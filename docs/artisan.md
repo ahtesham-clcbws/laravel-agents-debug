@@ -1,6 +1,6 @@
 # Artisan CLI Control Panel
 
-The package registers dynamic console command control hooks so that human developers and AI coding agents can manage logger status and active directory sizes right from the terminal.
+The package registers a full console command control suite for managing profiler state, log lifecycle, and debug sessions directly from the terminal.
 
 ---
 
@@ -10,9 +10,9 @@ The package registers dynamic console command control hooks so that human develo
 php artisan agent:debug-on
 ```
 
-*   **Action**: Scans and updates your `.env` configuration file, adding or updating:
-    `AGENT_DEBUGGER_ENABLED=true`
-*   **Downstream Effects**: Automatically clears the application's configuration cache so that shifts are registered instantly across local processes.
+- Writes `AGENT_DEBUGGER_ENABLED=true` to `.env`
+- Clears the application configuration cache automatically
+- Activates all middleware profilers, SSE stream, and dashboard routes
 
 ---
 
@@ -22,9 +22,8 @@ php artisan agent:debug-on
 php artisan agent:debug-off
 ```
 
-*   **Action**: Scans and updates your `.env` configuration file, adding or updating:
-    `AGENT_DEBUGGER_ENABLED=false`
-*   **Downstream Effects**: Instantly isolates and silences the middleware from executing intercept calculations, reducing active profiling overhead.
+- Writes `AGENT_DEBUGGER_ENABLED=false` to `.env`
+- Silences all middleware intercept calculations immediately with zero overhead
 
 ---
 
@@ -34,35 +33,50 @@ php artisan agent:debug-off
 php artisan agent:debug-status
 ```
 
-*   **Action**: Renders a formatted CLI console table compiling active parameter configurations:
-    *   Active State (Enabled vs Disabled)
-    *   Logging Style (Single vs Date-wise)
-    *   Logging Directory Location
-    *   Monitored Environment Variables Config List
-    *   Current File Storage Footprint sizes (in KB/MB)
+Renders a formatted CLI table showing:
+- Active State (Enabled vs Disabled)
+- Logging Style (Single vs Date-wise)
+- Storage Directory Location
+- Monitored Environment Variables List
+- Current File Storage Footprint (KB/MB)
 
 ---
 
-## 4. Purge Diagnostics Logs
+## 4. Purge Diagnostic Logs
 
 ```bash
 php artisan agent:debug-clean {--days=X}
 ```
 
-*   **Action**: Purges, truncates, and completely cleans active `.log` files inside your storage directory.
-*   **Parameters**:
-    *   `--days=X`: Purges only daily log files and single log states older than `X` days, retaining recent profiles.
-*   **Use Cases**: Perfect for clearing out old debug footprints before initiating a new feature testing workflow, keeping your context logs compact and targeted.
+- Purges all `.log` files in the storage directory
+- `--days=X`: Retains files newer than X days, purging only aged logs
+- Perfect for clearing context before new feature testing workflows
 
 ---
 
-## 5. Live Stream Tail Viewer
+## 5. Live Terminal Stream Viewer
 
 ```bash
 php artisan agent:debug-tail {--file=name.log}
 ```
 
-*   **Action**: Establishes a live background tailing loop in the CLI terminal rendering incoming HTTP requests, status cards, warning boxes (N+1 query warnings), and error traces as they happen.
-*   **Parameters**:
-    *   `--file=name.log`: Tail a specific log file instead of the default date-wise file.
-*   **Aesthetics**: Beautifully styled using Laravel Termwind with color status badges, bold highlights, and clean typography.
+Establishes a live tailing loop in the CLI terminal, rendering incoming requests as styled Termwind cards with:
+- Color status badges (green 2xx, amber 3xx/4xx, red 5xx)
+- N+1 warning boxes
+- Exception trace blocks
+- `--file=name.log`: Tail a specific named log file
+
+---
+
+## 6. Portable Session Recorder
+
+```bash
+php artisan agent:debug-record {--format=md} {--output=path}
+```
+
+Exports subsequent captured requests into a standalone, shareable debug bundle:
+- `--format=md`: Markdown report (default)
+- `--format=json`: Structured JSON package
+- `--output=path`: Custom output path
+
+Ideal for attaching to GitHub PRs, Jira issues, or AI agent prompts for senior review.

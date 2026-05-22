@@ -1,45 +1,23 @@
 # Core Diagnostics & Profilers
 
-Laravel Agent-Debugger exposes ten premium server-driven diagnostic profilers specifically designed to catch errors, identify optimization opportunities, and simplify local development.
+**Laravel Agent-Debugger v3.1.0** provides **29 premium server-driven diagnostic profilers** and **3 interactive dashboard tools** designed to catch errors, identify optimization opportunities, and simplify local development — with zero external JS/CSS dependencies.
 
 ---
 
-## 1. Zero-JS Floating Viewport Status Badge 🔴
+## Phase A: Core Diagnostics
 
-### The Problem
-When working locally, developers frequently forget if their profiling features are turned on, resulting in unnecessary background calculations or polluted storage logs. Heavy frontend JavaScript solutions clash with SPA framework states.
+### 1. Zero-JS Floating Viewport Status Badge 🔴
 
-### The Solution
-A zero-dependency server-side HTML/CSS injection that renders a beautiful, glassmorphic floating dashboard status badge in the bottom-right corner of successful HTML responses showing real-time metrics.
+A zero-dependency server-side HTML/CSS injection that renders a glassmorphic floating status badge in the bottom-right corner of HTML responses. Shows real-time execution duration, memory usage, and active query count.
 
-### What We Log
-This is a pure visual frontend cue. No file logs are written.
-
-### How It Works
-The `ViewportBorderInjector` global middleware scans the final response payload. If it matches `text/html`, it dynamically retrieves request duration and active query count from the state manager and injects a styled blur container right before `</body>`:
-```html
-<div id="agent-debugger-badge" style="position: fixed; bottom: 16px; right: 16px; background: rgba(18, 18, 18, 0.85); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.15); border-radius: 20px; padding: 8px 16px; color: #fff; font-family: sans-serif; font-size: 12px; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.4); z-index: 999999;">
-    <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ef4444; box-shadow: 0 0 8px #ef4444;"></span>
-    <strong>Agent Active</strong>
-    <span>|</span>
-    <span>⚡ 65ms</span>
-    <span>|</span>
-    <span>🗄️ 12 Queries</span>
-</div>
-```
+**How it works**: `ViewportBorderInjector` middleware scans the final response. If it's `text/html` and not an AJAX/Inertia request, it injects a styled blur container before `</body>`.
 
 ---
 
-## 2. User Navigation Breadcrumbs 🧭
+### 2. User Navigation Breadcrumbs 🧭
 
-### The Problem
-Stack traces show a crash at a specific instant, but completely isolate *how* the user got there, making multi-stage forms or wizard redirection flows incredibly hard to trace.
+Tracks the user's session navigation history — last 10 visited URLs, HTTP methods, and status codes — to reconstruct what path led to an error.
 
-### The Solution
-A session-backed, lightweight request history trail that tracks preceding navigation steps.
-
-### What We Log
-Logs the last 10 visited URLs with methods and status codes:
 ```text
 - SESSION BREADCRUMB TRAIL:
   1. [GET 200] /student/dashboard
@@ -47,240 +25,250 @@ Logs the last 10 visited URLs with methods and status codes:
   3. [POST 500] /student/tests/4/submit (CRASHED)
 ```
 
-### How It Works
-At request start, the middleware loads a history array from the active session, pushes the incoming route, trims the collection to 10 records, and saves it. On request termination, it fills in the final HTTP status code.
-
 ---
 
-## 3. Caught Exceptions Tracker 🪝
+### 3. Caught Exceptions Tracker 🪝
 
-### The Problem
-Newbies frequently swallow failures in manual `try-catch` redirects:
-```php
-try {
-    $book = Book::findOrFail($id);
-} catch (\Exception $e) {
-    return redirect('/home'); // Silent failure!
-}
-```
-The page redirects successfully, but the database fail remains hidden without creating system error logs.
+Intercepts exceptions that are silently swallowed inside `try-catch` redirects before they disappear from logs.
 
-### The Solution
-A proactive Exception Interceptor that traps exceptions thrown during the request lifecycle before they get cleared by user-level controllers or redirects.
-
-### What We Log
-SWallowed exception class names, messages, files, and lines:
 ```text
 Class: Illuminate\Database\Eloquent\ModelNotFoundException
-Message: No query results found for model [App\Models\Book] #42
-Line: 74
+Message: No query results for model [App\Models\Book] #42
+File: BookController.php  Line: 74
 ```
-
-### How It Works
-We listen to the native log writing channel using `Log::listen()`. If a redirection response (302) is compiled and warnings have been recorded, the profiler extracts the caught exception payload and appends it to the diagnostic log.
 
 ---
 
-## 4. Database Transaction Auditor 💳
+### 4. Database Transaction Auditor 💳
 
-### The Problem
-Payment gateways or background jobs use transactions. If a minor database constraint occurs, a silent `DB::rollBack()` is triggered. The request completes successfully, but the database remains empty. A junior developer has no idea why the code ran but data was not saved.
+Logs `beginTransaction`, `commit`, and `rollBack` events inline within the SQL query sequence, pointing to exact file/line triggers.
 
-### The Solution
-An inline database transaction auditor logging Begins, Commits, and Rollbacks interleaved directly within the SQL query sequence.
-
-### What We Log
-Exact timestamps and file locations of transaction actions:
 ```text
 * [0.00ms] DB::beginTransaction()
 * [1.02ms] select * from `users` where `id` = 14 limit 1
 * [0.00ms] DB::rollBack() (Triggered on BookController@save line 102)
 ```
 
-### How It Works
-The database profiler registers listeners for framework events: `TransactionBeginning`, `TransactionCommitted`, and `TransactionRolledBack`. It inspects PHP's debug callstack to locate the file and line triggering the transaction action.
-
 ---
 
-## 5. N+1 Query Loop Detector ⚠️
+### 5. N+1 Query Loop Detector ⚠️
 
-### The Problem
-Developers load list models and request relationships inside Blade loops without eager loading, generating hundreds of unnecessary database queries that slow down the server.
+Parameterizes queries into generic templates. If any template repeats 5+ times in a single request, it fires a warning with copy-pasteable eager loading remedies.
 
-### The Solution
-An automated query pattern signature scanner. If an identical query pattern runs 5+ times in a single request, it flags it as a warning with immediate eager loading advice.
-
-### What We Log
-An N+1 alert listing execution count and explicit code solutions:
 ```text
 ⚠️ WARNING: N+1 Query Detected! The following query executed 12 times:
 * select * from `questions` where `id` = ? limit 1
-👉 Solution: Eager load relationships (e.g. TestAttempt::with('questions')) in your controller.
+👉 Solution: Eager load relationships (e.g. TestAttempt::with('questions'))
 ```
-
-### How It Works
-Queries are parameterized into generic templates. If any template repeats more than 5 times during one request, it triggers an alert and generates copy-pasteable controller remedies.
 
 ---
 
-## 6. Config & Env Drift Detector 🔄
+### 6. Config & Env Drift Detector 🔄
 
-### The Problem
-A common local development mystery: *"It worked yesterday but not today!"* Developers silently edit `.env` variables or keys, break database configurations, and forget about the shift.
+SHA-256 hashes monitored `.env` keys at request start. If the hash mismatches the previous request's cached signature, it diffs and reports changed keys.
 
-### The Solution
-A configuration signature diff engine checking environment parameters between requests.
-
-### What We Log
-Drift alerts displaying changed environment keys and their old vs new values:
 ```text
 ⚠️ WARNING: LOCAL ENVIRONMENT CONFIGURATION DRIFT DETECTED!
   - SESSION_DRIVER changed from 'file' to 'redis'
 ```
 
-### How It Works
-Generates a SHA-256 hash checksum of monitored environment keys at request start. If it mismatches the stored cache signature from the previous request, it parses the differences key-by-key and warns the developer.
+---
+
+### 7. Compiled Blade Exception Resolver 🖌️
+
+Maps `ViewException` compiled cache paths (e.g., `/storage/framework/views/2fa8d7.php`) back to the physical `.blade.php` source file and exact line.
 
 ---
 
-## 7. Compiled Blade Exception Resolver 🖌g
+### 8. Gate & Policy Authorization Profiler 🛡️
 
-### The Problem
-When a typo is written in a Blade template, Laravel throws a `ViewException` pointing to a temporary compiled cached PHP file (e.g. `/storage/framework/views/2fa8d7...php`), making the actual error extremely hard to find.
+Subscribes to `Gate::after()` to capture every ability evaluation result, arguments, and allowed/denied outcome.
 
-### The Solution
-A compiled-to-source map resolver that instantly maps compiled view caches back to raw physical template files.
-
-### What We Log
-The physical raw `.blade.php` file path, the exact line, and line contents:
-```text
-File: /resources/views/components/book-card.blade.php
-Line: 12
-Original Line: <p>{{ $book->author->getShortName() }}</p>
-```
-
-### How It Works
-Intercepts `ViewException` events, inspects Laravel's template compilation maps to resolve the cached hash back to its raw template registry, reads the file, and prints the exact error source.
-
----
-
-## 8. Gate & Policy Authorization Profiler 🛡️
-
-### The Problem
-Encountering silent `403 Forbidden` screens is extremely common, yet identifying which specific policy or parameter rejected the user is an annoying guessing game.
-
-### The Solution
-Inline authorization policy checks auditor.
-
-### What We Log
-Permissions evaluated, arguments, and outcomes:
 ```text
 * [ALLOWED] view-test (Arguments: App\Models\Test #4)
 * [DENIED] update-test (Arguments: App\Models\Test #4)
 ```
 
-### How It Works
-Subscribes to gate callback evaluations using `Gate::after()` to compile ability parameters and result booleans.
+---
+
+### 9. Custom Session State Logger 💾
+
+Reads `Session::all()`, filters framework internals, and exposes developer-defined session keys per request.
 
 ---
 
-## 9. Custom Session State Logger 💾
+### 10. Rich Actor Identification 👤
 
-### The Problem
-Session-backed data (wizard states, shopping carts) are hidden from default logs, requiring tedious debugging prints.
+Resolves the authenticated User ID to a configured identifier field (email, username) for instant actor context.
 
-### The Solution
-A session tracker filtering out framework keys to expose developer state parameters.
-
-### What We Log
-Active developer session keys:
-```text
-* test_attempt_id => 82
-* active_step => 5
-```
-
-### How It Works
-Reads `Session::all()`, excludes standard authentication and flash configurations, and outputs user-defined parameters.
-
----
-
-## 10. Rich Actor Identification 👤
-
-### The Problem
-Standard logs print `Auth User ID: 14`, forcing developers to query database records to identify the developer or user role currently executing actions.
-
-### The Solution
-An actor enrichment card mapping User IDs to configurations (e.g., email or username).
-
-### What We Log
-Enriched profile string:
 ```text
 Auth: User #14 (student: john@example.com)
 ```
 
-### How It Works
-Reads `'auth_identifiers'` keys array, resolves the active User model model properties, and formats the output.
+---
+
+## Phase B: Database & Query Intelligence
+
+### 11. Visual SQL EXPLAIN Query Analyzer 🔬
+
+Adds a `🔬 Explain` button next to each query in the Database tab. Submits via `/_agent_debug/explain`, runs `EXPLAIN` on your database, and renders the query execution plan with highlighted index scans, full table scans, and join types.
 
 ---
 
-## 11. Discord & Slack Crash Notification Channels 🔔
+### 12. Duplicate & Redundant Query Detector 👥
 
-### The Problem
-When running background webhooks or development staging testing workflows, HTTP 500 error pages and stack traces are silently swallowed or hidden, keeping bugs hidden until they disrupt test operations.
-
-### The Solution
-A low-latency, zero-dependency background HTTP dispatcher that sends styled JSON embed cards to Discord or Slack channels immediately when application crashes (HTTP Status `500` and above) occur.
-
-### What We Log
-This is a visual notification channel. No file logs are written directly by this channel, but it extracts active exceptions and request parameters:
-```json
-{
-  "title": "🔥 Unhandled Application Crash Intercepted!",
-  "description": "Class: RuntimeException\nMessage: Database Connection Dropped\nLocation: OrderController.php:L54",
-  "fields": [
-    { "name": "Method & URL", "value": "`POST` https://example.com/checkout" }
-  ]
-}
-```
-
-### How It Works
-If the response status exceeds `500`, the middleware builds a rich embed payload and executes a silent background request using PHP's native `file_get_contents` streams with a small `2.0` second timeout, ensuring absolute zero latency for developers.
+Detects exact SQL queries (same statement + same parameter bindings) running more than once. Flags them with cache-based remediation suggestions.
 
 ---
 
-## 12. Execution Milestones & Performance Spans ⚡
+### 13. Interactive SQL Playground 📝
 
-### The Problem
-While logging query execution and memory timing is helpful, profiling custom business actions, remote API integrations, or specific method blocks requires complex overhead tools.
+A safe, in-dashboard `SELECT`-only SQL terminal. Results render as a paginated table (capped at 50 rows). Includes a "Send to Playground" link from any logged query.
 
-### The Solution
-A global, lightweight procedural helper `debug_span()` to wrap, record, and log timing milestones during the request lifecycle.
+---
 
-### What We Log
-Spans named by the developer alongside timing metrics:
+### 14. SQL Database Index Advisor 💾
+
+Heuristically scans `WHERE`, `JOIN`, and `ORDER BY` columns for missing indexes and generates ready-to-paste Artisan migration recommendations.
+
 ```text
-- PERFORMANCE SPANS:
-  * Stripe Checkout API Call: 5.40ms
-  * PDF Bill Generator: 12.10ms
+💡 DATABASE INDEX RECOMMENDATION:
+* Table: 'orders' | Column: 'user_id'
+👉 Solution: Schema::table('orders', fn($t) => $t->index('user_id'));
 ```
-
-### How It Works
-The helper `debug_span($name, $callback)` records the current time, runs the closure, calculates the difference, and appends the result to our central state singleton registry (`DebugLoggerManager`), compiling them into final logs.
 
 ---
 
-## 13. SPA, Inertia.js, & REST API Compatibility 🚀
+## Phase C: Async & Side-Effect Telemetry
 
-### The Problem
-Popular packages like Laravel Debugbar or custom visual injectors append massive inline `<script>` tags or HTML panels to the bottom of HTTP responses. While this works for traditional multi-page apps (MPAs), it completely breaks:
-*   **Inertia.js AJAX Page Swaps**: Disrupts JSON hydration and throws console parsing exceptions.
-*   **REST APIs / Mobile Client endpoints**: Appends HTML junk to JSON arrays, corrupting structural clients.
-*   **Livewire & Alpine.js**: Interferes with DOM diffing algorithms, triggering state corruption.
+### 15. Queue Job & Event Payload Serializer 🎧
 
-### The Solution
-**Laravel Agent-Debugger** solves this by keeping a **Zero-JS footprint** on AJAX/API requests:
-1.  **Response Filter**: The floating glassmorphic Viewport Status Badge is **only** injected when the request is a standard, non-AJAX `text/html` document.
-2.  **AJAX & API Isolation**: If a request is an Inertia.js page swap (`X-Inertia` header present) or returns `application/json`, the badge injection is cleanly bypassed.
-3.  **High-Fidelity Offline Logs**: All profile events (database transactions, caught exceptions, execution milestones, breadcrumbs) are still recorded silently in `agent_debug.log` and the local dashboard.
+Captures every dispatched application event and background queue job alongside their fully decoded PHP payload arguments. Renders them in the **Events & Jobs** dashboard tab.
 
-This guarantees that your Inertia.js router remains 100% stable while you enjoy complete diagnostic visibility!
+---
+
+### 16. Outgoing Mail Sandbox 📧
+
+Hooks into `MessageSending` event, captures email content to disk as `.html` files, and renders the exact visual HTML/Markdown preview inside a dedicated **Outgoing Mail** dashboard tab.
+
+---
+
+### 17. Cache Hit/Miss Monitor 🗂️
+
+Listens to cache event callbacks and records every `Cache::get()`, `Cache::put()`, and `Cache::forget()` with the cache key, data byte size, and TTL expiration.
+
+---
+
+### 18. Eloquent Model Lifecycle Tracker 🔄
+
+Registers a global Eloquent observer capturing `creating`, `created`, `updating`, `updated`, `deleting`, `deleted` events with the model class name and record ID.
+
+---
+
+## Phase D: Visual Profiling & Timelines
+
+### 19. DevTools-Style Timeline Waterfall ⏱️
+
+A proportional horizontal Gantt chart sequencing the full request lifecycle:
+- 🔵 **App Boot** — framework bootstrap latency
+- 🟢 **SQL Queries** — per-query execution segments
+- 🟣 **Custom Spans** — `debug_span()` profiled code blocks
+- 🟠 **External HTTP** — outgoing API call durations
+
+---
+
+### 20. Interactive Blade Template Composition Tree 🗺️
+
+Parses the view rendering sequence from logs and draws a connected flowchart showing exactly which layouts, components, and partial views were composed during the request. Color-coded by type:
+- 🏛️ **Purple** — layout files
+- 🧩 **Cyan** — reusable components
+- 📄 **Slate** — page-level templates
+
+---
+
+### 21. Live PHP Memory Allocation Flame-Graph 📊
+
+Uses `memory_get_peak_usage(true)` to capture real PHP heap consumption and segments it into four subsystem layers (Boot, Eloquent, HTTP/Payload, GC Residual), proportionally weighted by active request activity. Rendered as a color-coded stacked bar flame-graph that updates live per request.
+
+---
+
+### 22. Outgoing Latency Radar 📊
+
+Calculates the ratio between total database query time vs. application overhead and renders proportional progress meters in the log view.
+
+---
+
+## Phase E: Environment, Security & DevOps
+
+### 23. Livewire Hydration State Tracker 🔌
+
+Captures Livewire component reactive state from `data.fingerprint` and `data.serverMemo` on update requests and saves discrete `.json` archives to `storage/logs/agent-debugger/livewire/`.
+
+---
+
+### 24. Dev Environment Configuration Shield 🚨
+
+At `php artisan serve` startup, performs fast TCP socket checks:
+- If `QUEUE_CONNECTION=redis`, checks if port `6379` is listening
+- If `MAIL_MAILER=smtp`, checks if port `1025` (Mailpit/Mailhog) is active
+
+Flashes a glowing alert banner on the dashboard if a configured service is offline.
+
+---
+
+### 25. Cookie & CSRF Token Debugger 🍪
+
+Analyzes request cookie states and CSRF token validation chains, surfacing exactly why a `419 Page Expired` error occurred.
+
+---
+
+### 26. Interactive .env vs .env.example Diff Audit ⚖️
+
+Side-by-side color-coded comparison grid of keys present in `.env` but missing from `.env.example` and vice versa, with drift warnings.
+
+---
+
+### 27. Category Tag Filtering 🏷️
+
+Appending `?_debug_tag=checkout` to any URL tags that request in the dashboard sidebar, enabling scoped filtering of related multi-request workflows.
+
+---
+
+### 28. Composer Security Dependency Auditor 🩹
+
+Scans `composer.lock` against the PHP Security Advisory database, flagging packages with known CVEs directly on the dashboard.
+
+---
+
+### 29. Git Branch Code Correlation Analyzer 🚀
+
+Reads the active Git branch and displays it on every request log. Lists files modified locally (via `git diff --name-only`) with a warning badge when a file in the request callstack has uncommitted changes.
+
+---
+
+## Dashboard Tools
+
+### 30. Real-time SSE Log Streaming 🚿
+
+Upgrades the dashboard from timed AJAX polling to a persistent `EventSource` stream via `/_agent_debug/sse`, delivering zero-lag log updates. Falls back to standard polling automatically if `EventSource` is unavailable.
+
+---
+
+### 31. Outgoing API Mock Interceptor 🎭
+
+A full UI rule builder inside the dashboard's **Outgoing API Mocks** tab. Rules are persisted to `storage/logs/agent-debugger/mocks.json` and applied via `Http::fake()` on every request — intercepting Guzzle/HTTP Client calls without touching application code.
+
+---
+
+### 32. Browser-Based PHPUnit Test Runner 🧪
+
+A dark terminal-styled console inside the **PHPUnit Runner** tab that executes `vendor/bin/phpunit tests/Feature/` in the background and streams the full output directly to the browser, including the final exit code badge.
+
+---
+
+### 33. Artisan Quick-Console 🛠️
+
+Floating header buttons for one-click execution of:
+- `php artisan cache:clear`
+- `php artisan route:clear`
+- `php artisan agent:debug-clean`

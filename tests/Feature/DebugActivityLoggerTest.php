@@ -24,7 +24,7 @@ class DebugActivityLoggerTest extends TestCase
         parent::setUp();
         
         $this->manager = $this->app->make(DebugLoggerManager::class);
-        $this->middleware = new DebugActivityLogger($this->manager);
+        $this->middleware = $this->app->make(DebugActivityLogger::class);
 
         config(['agent-debugger.enabled' => true]);
         config(['agent-debugger.log_style' => 'single']);

@@ -2,39 +2,63 @@
 layout: home
 
 hero:
-  name: Laravel Agent-Debugger
-  text: Zero-JS, High-Fidelity Diagnostics
-  tagline: A premium server-driven diagnostics and profiling suite for Laravel 12.x/13.x
+  name: "🔴 Laravel Agent-Debugger"
+  text: "v3.1.0 — Zero-JS, High-Fidelity Diagnostics"
+  tagline: A premium server-driven diagnostics, profiling, and visual dashboard suite for Laravel 12.x / 13.x — 29 features, real-time SSE streaming, and a fully interactive SPA dashboard.
+  image:
+    src: https://img.shields.io/badge/Laravel%20Agent--Debugger-v3.1.0-FF2D20?style=for-the-badge&logo=laravel&logoColor=white
+    alt: Laravel Agent-Debugger
   actions:
     - theme: brand
-      text: Get Started
+      text: Get Started →
       link: /vision
+    - theme: alt
+      text: All Features
+      link: /features
     - theme: alt
       text: Configuration
       link: /configuration
     - theme: alt
-      text: View Log Schema
-      link: /schema
+      text: Artisan CLI
+      link: /artisan
 
 features:
   - icon: 🔴
-    title: Zero-JS Viewport Status Badge
-    details: Injects a premium, glassmorphic floating badge showing real-time execution times and query counts in the bottom-right corner.
-  - icon: 🧭
-    title: Request Breadcrumbs
-    details: Logs the last 10 visited URLs with methods and status codes to reconstruct user journeys leading to a crash.
-  - icon: 💳
-    title: DB Transaction Auditor
-    details: Tracks begins, commits, and rollbacks directly inline with queries to debug silent webhook database rollbacks.
+    title: Viewport Status Badge
+    details: Glassmorphic floating badge showing live execution time, memory usage, and query count on every HTML page.
+  - icon: ⏱️
+    title: Timeline Waterfall
+    details: DevTools-style horizontal Gantt chart visualising Boot → DB Queries → Custom Spans → External HTTP calls.
+  - icon: 🗺️
+    title: Blade Composition Tree
+    details: Visual flowchart of nested layout hierarchies, components, and partial views rendered per request.
+  - icon: 📊
+    title: Memory Flame-Graph
+    details: Real PHP peak-heap allocation segmented into Boot, Eloquent, HTTP/Payload, and GC layers — live per request.
+  - icon: 🔬
+    title: SQL EXPLAIN Analyzer
+    details: One-click query plan visualization highlighting full table scans, missing indexes, and join strategies.
+  - icon: 🎭
+    title: Outgoing API Mocks
+    details: UI rule builder that intercepts Guzzle/Http::fake() calls without touching any application code.
+  - icon: 🚿
+    title: Real-time SSE Streaming
+    details: Persistent Server-Sent Events stream delivering zero-lag log updates with AJAX polling fallback.
+  - icon: 🧪
+    title: PHPUnit Test Runner
+    details: Dark terminal console inside the dashboard that executes the feature test suite and streams results live.
+  - icon: 📧
+    title: Outgoing Mail Sandbox
+    details: Intercepts Laravel Mailables and renders exact HTML/Markdown email previews inside a dashboard tab.
   - icon: ⚠️
-    title: N+1 Query Loop Detector
-    details: Scans query counts in real-time, alerts on redundant database calls, and suggests eager loading relationships.
-  - icon: 🔄
-    title: Config & Env Drift Alert
-    details: Checks environment states between requests and alerts if driver configurations or secrets are modified.
-  - icon: 🖌️
-    title: Blade Compiler Resolver
-    details: Maps unreadable compiled storage paths back to their original physical raw .blade.php file and error lines.
+    title: N+1 Query Detector
+    details: Parameterizes and counts query templates — alerts when any pattern runs 5+ times with eager-load fixes.
+  - icon: 🩹
+    title: Composer CVE Auditor
+    details: Scans composer.lock against PHP security advisories and flags vulnerable packages on the dashboard.
+  - icon: 🛠️
+    title: Artisan Quick-Console
+    details: One-click dashboard buttons for cache:clear, route:clear, and debug:clean without leaving the browser.
 ---
 
 ## The Origin Story: Born of Necessity 💡
@@ -43,34 +67,23 @@ features:
 >
 > — **Ahtesham**, Creator of Laravel Agent-Debugger
 
-By providing structured, high-fidelity, and compact server-side logs, **Laravel Agent-Debugger** acts as a powerful bridge between human developers, local runtimes, and AI coding agents. It compiles exactly the diagnostic context an AI needs to identify and resolve complex bugs in a fraction of a second—completely eliminating manual trace explanations.
+By providing structured, high-fidelity, and compact server-side logs, **Laravel Agent-Debugger** acts as a powerful bridge between human developers, local runtimes, and AI coding agents.
 
 ---
 
 ## Why Choose Laravel Agent-Debugger?
 
-Standard Laravel debugging tools are heavy, depend on frontend scripts (which fail in custom Inertia or REST API contexts), or leak memory on high-volume requests. **Laravel Agent-Debugger** solves this by operating entirely on the server-side as a global middleware inspector:
+*   **Require-Dev Isolation** — never shipped to production
+*   **Zero JS Footprint** — no frontend script conflicts with Inertia, Livewire, or REST APIs
+*   **Real-time SSE Dashboard** — live streaming updates without polling overhead
+*   **29 Premium Features** — from SQL EXPLAIN to Memory Flame-Graphs to Outgoing API Mocks
+*   **Artisan CLI Suite** — full lifecycle control from the terminal
 
-*   **Require-Dev Isolation**: Automatically excluded from production caches.
-*   **Zero JS Footprint**: High-fidelity logs are delivered straight to your local `.log` storage.
-*   **Balanced Payload Truncation**: Shows schemas while keeping sizes optimal for developer reading and AI parsing.
-*   **Artisan Control Command Suite**: Command configurations, log rotations, and cleanups from the CLI.
-
-### Quick Start Installation
+### Quick Start
 
 ```bash
 composer require --dev clcbws/laravel-agents-debug
-```
-
-Publish package configurations:
-
-```bash
 php artisan vendor:publish --provider="LaravelAgentDebugger\DebugActivityServiceProvider"
-```
-
-Activate live profiling immediately:
-
-```bash
 php artisan agent:debug-on
 ```
 
