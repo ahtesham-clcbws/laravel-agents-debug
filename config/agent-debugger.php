@@ -18,9 +18,9 @@ return [
     | Zero-JS Active Viewport Indicator
     |--------------------------------------------------------------------------
     |
-    | When true, the package appends a solid 2px solid red viewport border styling
-    | frame to HTML page outputs. This provides a visual confirmation that the
-    | server-side profiling logs are actively running.
+    | When true, the package appends a premium glassmorphic floating status badge
+    | showing request timings and queries count to HTML page outputs. This provides
+    | a gorgeous visual confirmation that the profiling is actively running.
     |
     */
     'show_frontend_indicator' => env('AGENT_DEBUGGER_INDICATOR', true),

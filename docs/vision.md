@@ -55,7 +55,7 @@ graph TD
     F --> H
     G --> H
     
-    H --> I["Middleware: Viewport Border CSS Injection"]
+    H --> I["Middleware: Viewport Glassmorphic Badge Injection"]
     I --> J["Middleware: terminate()"]
     
     J --> K["Generate Log Header<br>(Actor Identification, Peak Memory, Request Timing)"]

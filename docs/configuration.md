@@ -13,7 +13,7 @@ return [
     // Global active switch (read from .env or toggled via Artisan commands)
     'enabled' => env('AGENT_DEBUGGER_ENABLED', false),
 
-    // Injects a solid 2px red border framing the viewport to notify that logging is active
+    // Injects a premium glassmorphic floating badge to notify that logging is active
     'show_frontend_indicator' => env('AGENT_DEBUGGER_INDICATOR', true),
 
     // Log File Rotation Options: 'single' vs 'date-wise'
