@@ -1,6 +1,26 @@
 # Core Diagnostics & Profilers
 
-**Laravel Agent-Debugger v3.1.0** provides **29 premium server-driven diagnostic profilers** and **3 interactive dashboard tools** designed to catch errors, identify optimization opportunities, and simplify local development — with zero external JS/CSS dependencies.
+**Laravel Agent-Debugger v3.1.0** provides **13 interactive dashboard tabs** and **29 premium server-driven diagnostic profilers** designed to catch errors, identify optimization opportunities, and simplify local development — with zero external JS/CSS dependencies and fully offline capabilities.
+
+---
+
+## 📋 Interactive Dashboard Tabs
+
+The debugger interface provides **13 unified tabs** to monitor application state changes dynamically:
+
+1. **📜 Execution Log** — Display of active request execution records, actor details, runtime timings, HTTP headers, request variables, and exception stack traces.
+2. **🗃️ Database Queries** — Display of all executed SQL statements with caller traces (class/file line), N+1 loop flags, duplicate markers, index advisory tips, and one-click `🔬 Explain` plan mapping.
+3. **⏱️ Timeline Waterfall** — Proportional Gantt chart sequencing App Boot, database query segments, outgoing HTTP requests, and manual milestone timings (`debug_span()`).
+4. **📢 Events & Jobs** — Real-time logging of dispatched events, queued background job signatures, and serialized data payloads.
+5. **🗺️ Blade Views** — Dynamic view composition hierarchy flowchart mapping layout, component, and template renderings.
+6. **📦 Inertia Properties** — Interactive JSON tree viewer showing the exact `props` payloads passed to Inertia.js views.
+7. **🔌 Livewire Properties** — Complete telemetry list of Livewire component fingerprints, updates, serverMemo state, and execution parameters.
+8. **🗂️ Cache Monitor** — Live breakdown of cache hits, misses, writes, and forgetting keys, along with data sizes and TTL details.
+9. **🔄 Eloquent Events** — Active monitoring card listing observer calls (`created`, `updated`, `deleted`) on models.
+10. **📧 Outgoing Mail** — Renders exact HTML/Markdown preview blocks of outgoing Mailables sandbox.
+11. **📊 Memory Allocations** — Stacked-bar flame-graph displaying dynamic PHP heap allocations (Boot, Eloquent, HTTP, GC).
+12. **🎭 Outgoing API Mocks** — Visual rule builder allowing developers to map endpoint stubs to Guzzle/HTTP Client mocks (`Http::fake()`).
+13. **🧪 PHPUnit Runner** — Interactive dark terminal console showing execution progress and exit statuses of local PHPUnit suites.
 
 ---
 

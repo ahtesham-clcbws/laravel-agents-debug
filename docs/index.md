@@ -4,7 +4,7 @@ layout: home
 hero:
   name: "🔴 Laravel Agent-Debugger"
   text: "v3.1.0 — Zero-JS, High-Fidelity Diagnostics"
-  tagline: A premium server-driven diagnostics, profiling, and visual dashboard suite for Laravel 12.x / 13.x — 29 features, real-time SSE streaming, and a fully interactive SPA dashboard.
+  tagline: A premium server-driven diagnostics, profiling, and visual dashboard suite for Laravel 12.x / 13.x — 13 interactive tabs, 29 server-side diagnostic profilers, real-time SSE streaming, and a fully interactive SPA dashboard.
   image:
     src: https://img.shields.io/badge/Laravel%20Agent--Debugger-v3.1.0-FF2D20?style=for-the-badge&logo=laravel&logoColor=white
     alt: Laravel Agent-Debugger
@@ -76,7 +76,7 @@ By providing structured, high-fidelity, and compact server-side logs, **Laravel 
 *   **Require-Dev Isolation** — never shipped to production
 *   **Zero JS Footprint** — no frontend script conflicts with Inertia, Livewire, or REST APIs
 *   **Real-time SSE Dashboard** — live streaming updates without polling overhead
-*   **29 Premium Features** — from SQL EXPLAIN to Memory Flame-Graphs to Outgoing API Mocks
+*   **13+29 Premium Features** — 13 interactive dashboard tabs and 29 server-side diagnostic profilers
 *   **Artisan CLI Suite** — full lifecycle control from the terminal
 
 ### Quick Start

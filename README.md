@@ -40,7 +40,7 @@ http://localhost/_agent_debug/dashboard
 
 ---
 
-## ✨ Feature Overview (v3.1.0 — 29 Features)
+## ✨ Feature Overview (v3.1.0 — 13 Dashboard Tabs & 29 Server-Side Profilers)
 
 ### 🔍 Core Diagnostics
 | # | Feature | Description |

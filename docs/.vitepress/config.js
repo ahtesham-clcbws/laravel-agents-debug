@@ -1,6 +1,6 @@
 export default {
   title: "Laravel Agent-Debugger",
-  description: "A Zero-JS, High-Fidelity Server-Side Diagnostics & Profiling Suite — v3.1.0 with 29 features, real-time SSE streaming, and an interactive SPA dashboard.",
+  description: "A Zero-JS, High-Fidelity Server-Side Diagnostics & Profiling Suite — v3.1.0 with 13 interactive tabs, 29 diagnostic profilers, real-time SSE streaming, and an interactive SPA dashboard.",
   base: "/laravel-agents-debug/",
   themeConfig: {
     nav: [
@@ -9,7 +9,7 @@ export default {
         text: "Documentation", 
         items: [
           { text: "The Vision", link: "/vision" },
-          { text: "All Features (29)", link: "/features" },
+          { text: "All Features (13+29)", link: "/features" },
           { text: "Config & Deployment", link: "/configuration" },
           { text: "Artisan CLI Guide", link: "/artisan" },
           { text: "Log Schema", link: "/schema" }
@@ -36,7 +36,7 @@ export default {
       {
         text: "Diagnostic Features",
         items: [
-          { text: "All 29 Features", link: "/features" },
+          { text: "All 13+29 Features", link: "/features" },
           { text: "Log Output Schema", link: "/schema" }
         ]
       },
