@@ -3,10 +3,10 @@ layout: home
 
 hero:
   name: "🔴 Laravel Agent-Debugger"
-  text: "v3.1.0 — Zero-JS, High-Fidelity Diagnostics"
+  text: "v3.1.1 — Zero-JS, High-Fidelity Diagnostics"
   tagline: A premium server-driven diagnostics, profiling, and visual dashboard suite for Laravel 12.x / 13.x — 13 interactive tabs, 29 server-side diagnostic profilers, real-time SSE streaming, and a fully interactive SPA dashboard.
   image:
-    src: https://img.shields.io/badge/Laravel%20Agent--Debugger-v3.1.0-FF2D20?style=for-the-badge&logo=laravel&logoColor=white
+    src: https://img.shields.io/badge/Laravel%20Agent--Debugger-v3.1.1-FF2D20?style=for-the-badge&logo=laravel&logoColor=white
     alt: Laravel Agent-Debugger
   actions:
     - theme: brand

@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://img.shields.io/badge/Laravel%20Agent--Debugger-v3.1.0-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel Agent-Debugger" height="50">
+<img src="https://img.shields.io/badge/Laravel%20Agent--Debugger-v3.1.1-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel Agent-Debugger" height="50">
 
 <br><br>
 
@@ -38,9 +38,11 @@ Then visit your visual dashboard:
 http://localhost/_agent_debug/dashboard
 ```
 
+![Laravel Agent-Debugger Dashboard](dashboard.jpeg)
+
 ---
 
-## ✨ Feature Overview (v3.1.0 — 13 Dashboard Tabs & 29 Server-Side Profilers)
+## ✨ Feature Overview (v3.1.1 — 13 Dashboard Tabs & 29 Server-Side Profilers)
 
 ### 🔍 Core Diagnostics
 | # | Feature | Description |
@@ -137,6 +139,7 @@ php artisan agent:debug-record      # Export session as portable .md/.json bundl
 - **Configuration** – https://ahtesham-clcbws.github.io/laravel-agents-debug/configuration
 - **Artisan CLI Guide** – https://ahtesham-clcbws.github.io/laravel-agents-debug/artisan
 - **Log Schema** – https://ahtesham-clcbws.github.io/laravel-agents-debug/schema
+- **Changelog v3.1.1** – https://ahtesham-clcbws.github.io/laravel-agents-debug/changelogs/v3.1.1
 - **Changelog v3.1.0** – https://ahtesham-clcbws.github.io/laravel-agents-debug/changelogs/v3.1.0
 - **Changelog v2.9.0** – https://ahtesham-clcbws.github.io/laravel-agents-debug/changelogs/v2.9.0
 

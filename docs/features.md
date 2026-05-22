@@ -1,6 +1,6 @@
 # Core Diagnostics & Profilers Reference Manual
 
-**Laravel Agent-Debugger v3.1.0** provides **13 interactive dashboard tabs** and **29 premium server-driven diagnostic profilers** designed to catch errors, identify optimization opportunities, and simplify local development — with zero external JS/CSS dependencies and fully offline capabilities.
+**Laravel Agent-Debugger v3.1.1** provides **13 interactive dashboard tabs** and **29 premium server-driven diagnostic profilers** designed to catch errors, identify optimization opportunities, and simplify local development — with zero external JS/CSS dependencies and fully offline capabilities.
 
 ---
 

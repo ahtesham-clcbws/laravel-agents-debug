@@ -19,6 +19,7 @@ export default {
       { 
         text: "Project History", 
         items: [
+          { text: "Changelog v3.1.1", link: "/changelogs/v3.1.1" },
           { text: "Changelog v3.1.0", link: "/changelogs/v3.1.0" },
           { text: "Changelog v2.9.0", link: "/changelogs/v2.9.0" },
           { text: "Changelog v2.8.0", link: "/changelogs/v2.8.0" },

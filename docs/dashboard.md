@@ -25,6 +25,8 @@ For standard local development servers, this is typically:
 
 The dashboard uses a dark glassmorphic design that runs 100% offline using localized asset routing.
 
+![Dashboard Screenshot](/dashboard.jpeg)
+
 ```mermaid
 graph TD
     A[Dashboard Header] --> B[System Config & Service Alerts]
