@@ -18,6 +18,7 @@ use LaravelAgentDebugger\Listeners\HttpClientProfiler;
 use LaravelAgentDebugger\Listeners\AuthorizationProfiler;
 use LaravelAgentDebugger\Listeners\SessionStateProfiler;
 use LaravelAgentDebugger\Listeners\EnvironmentTracker;
+use LaravelAgentDebugger\Listeners\CacheProfiler;
 
 class DebugActivityLogger
 {
@@ -31,6 +32,7 @@ class DebugActivityLogger
     protected AuthorizationProfiler $authorizationProfiler;
     protected SessionStateProfiler $sessionStateProfiler;
     protected EnvironmentTracker $environmentTracker;
+    protected CacheProfiler $cacheProfiler;
 
     public function __construct(DebugLoggerManager $manager)
     {
@@ -44,6 +46,7 @@ class DebugActivityLogger
         $this->authorizationProfiler = new AuthorizationProfiler($manager);
         $this->sessionStateProfiler = new SessionStateProfiler($manager);
         $this->environmentTracker = new EnvironmentTracker($manager);
+        $this->cacheProfiler = new CacheProfiler($manager);
     }
 
     /**
@@ -66,6 +69,7 @@ class DebugActivityLogger
         $this->eventJobProfiler->subscribe();
         $this->httpClientProfiler->subscribe();
         $this->authorizationProfiler->subscribe();
+        $this->cacheProfiler->subscribe();
 
         // Capture User authentication details
         $this->resolveAuthenticatedUser();
@@ -246,6 +250,7 @@ class DebugActivityLogger
         $isCrashed = $response->getStatusCode() >= 500;
         $queriesCount = count($this->manager->getQueries());
         $errorsCount = count($this->manager->getExceptions());
+        $cacheActionsCount = count($this->manager->getCacheActions());
 
         $log = [];
         $log[] = str_repeat('=', 80);
@@ -259,6 +264,7 @@ class DebugActivityLogger
         $log[] = "crashed: " . ($isCrashed ? 'true' : 'false');
         $log[] = "queries_count: {$queriesCount}";
         $log[] = "errors_count: {$errorsCount}";
+        $log[] = "cache_actions_count: {$cacheActionsCount}";
         $log[] = "---";
         $log[] = "[{$timestamp}] REQUEST: {$method} {$url}";
         $log[] = "IP: {$ip} | Auth: {$userString} | Execution: {$duration}ms | Memory Peak: {$memory} MB";
@@ -395,6 +401,18 @@ class DebugActivityLogger
             $log[] = "- PERFORMANCE SPANS:";
             foreach ($spans as $s) {
                 $log[] = "  * [{$s['duration']}ms] {$s['name']}";
+            }
+        }
+
+        // Cache Actions
+        $cacheActions = $this->manager->getCacheActions();
+        if (!empty($cacheActions)) {
+            $log[] = "";
+            $log[] = "- CACHE ACTIONS:";
+            foreach ($cacheActions as $action) {
+                $sizeStr = $action['size'] !== null ? " ({$action['size']} bytes)" : '';
+                $ttlStr = $action['ttl'] !== null ? " [TTL: {$action['ttl']}s]" : '';
+                $log[] = "  * [{$action['type']}] Key: '{$action['key']}'{$sizeStr}{$ttlStr}";
             }
         }
 

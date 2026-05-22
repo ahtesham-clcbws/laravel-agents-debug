@@ -11,8 +11,7 @@ export default {
           { text: "The Vision", link: "/vision" },
           { text: "Core Features", link: "/features" },
           { text: "Config & Deployment", link: "/configuration" },
-          { text: "Artisan CLI Guide", link: "/artisan" },
-          { text: "Proposed Roadmap", link: "/proposed_features" }
+          { text: "Artisan CLI Guide", link: "/artisan" }
         ]
       },
       { text: "Log Schema", link: "/schema" },
@@ -37,8 +36,7 @@ export default {
         text: "Diagnostic Features",
         items: [
           { text: "Core Profilers", link: "/features" },
-          { text: "Log Output Schema", link: "/schema" },
-          { text: "Proposed Roadmap", link: "/proposed_features" }
+          { text: "Log Output Schema", link: "/schema" }
         ]
       },
       {

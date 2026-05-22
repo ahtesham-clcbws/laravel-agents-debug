@@ -186,4 +186,22 @@ class DebugLoggerManager
     {
         return $this->spans;
     }
+
+    protected array $cacheActions = [];
+
+    public function addCacheAction(string $type, string $key, ?int $size = null, ?int $ttl = null): void
+    {
+        $this->cacheActions[] = [
+            'type' => $type,
+            'key' => $key,
+            'size' => $size,
+            'ttl' => $ttl,
+            'time' => microtime(true)
+        ];
+    }
+
+    public function getCacheActions(): array
+    {
+        return $this->cacheActions;
+    }
 }
