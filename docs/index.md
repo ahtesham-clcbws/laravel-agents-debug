@@ -5,9 +5,6 @@ hero:
   name: Laravel Agent-Debugger
   text: Zero-JS, High-Fidelity Diagnostics
   tagline: A premium server-driven diagnostics and profiling suite for Laravel 12.x/13.x
-  image:
-    src: /logo.png
-    alt: Laravel Agent-Debugger Logo
   actions:
     - theme: brand
       text: Get Started

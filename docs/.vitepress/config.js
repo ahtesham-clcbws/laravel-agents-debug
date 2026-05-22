@@ -2,11 +2,7 @@ export default {
   title: "Laravel Agent-Debugger",
   description: "A Zero-JS, High-Fidelity Server-Side Diagnostics & Profiling Suite.",
   base: "/laravel-agents-debug/",
-  head: [
-    ['link', { rel: 'icon', href: '/laravel-agents-debug/favicon.png' }]
-  ],
   themeConfig: {
-    logo: '/logo.png',
     nav: [
       { text: "Home", link: "/" },
       { 
