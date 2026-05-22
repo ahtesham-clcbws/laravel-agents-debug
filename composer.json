@@ -1,0 +1,52 @@
+{
+  "name": "clcbws/laravel-agents-debug",
+  "version": "2.8.0",
+  "description": "A Zero-JS, High-Fidelity Server-Side Diagnostics & Profiling Suite for Laravel 12/13.",
+  "type": "library",
+  "license": "MIT",
+  "homepage": "https://github.com/ahtesham-clcbws/laravel-agents-debug",
+  "support": {
+    "issues": "https://github.com/ahtesham-clcbws/laravel-agents-debug/issues",
+    "source": "https://github.com/ahtesham-clcbws/laravel-agents-debug"
+  },
+  "authors": [
+    {
+      "name": "Ahtesham",
+      "email": "ahtesham@example.com"
+    }
+  ],
+  "require": {
+    "php": "^8.3|^8.4",
+    "illuminate/support": "^12.0|^13.0",
+    "illuminate/database": "^12.0|^13.0",
+    "illuminate/http": "^12.0|^13.0",
+    "illuminate/session": "^12.0|^13.0",
+    "illuminate/console": "^12.0|^13.0",
+    "illuminate/log": "^12.0|^13.0"
+  },
+  "require-dev": {
+    "orchestra/testbench": "^10.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "LaravelAgentDebugger\\": "src/"
+    },
+    "files": [
+      "src/Helpers/functions.php"
+    ]
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "LaravelAgentDebugger\\Tests\\": "tests/"
+    }
+  },
+  "extra": {
+    "laravel": {
+      "providers": [
+        "LaravelAgentDebugger\\DebugActivityServiceProvider"
+      ]
+    }
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true
+}

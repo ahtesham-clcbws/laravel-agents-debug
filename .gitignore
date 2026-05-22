@@ -1,0 +1,18 @@
+# PHPUnit cache files
+.phpunit.result.cache
+
+# Dependencies
+/vendor/
+
+# Temporary storage files
+/storage/logs/agent_debug*.log
+/storage/logs/agent_debug*.bak
+
+# VSCode Workspace files
+.vscode/
+Local_Debug_Activity.code-workspace
+
+# Environment override overrides
+.env
+.env.backup
+.agents
