@@ -18,6 +18,7 @@ export default {
       { 
         text: "Project History", 
         items: [
+          { text: "Changelog v2.9.0", link: "/changelogs/v2.9.0" },
           { text: "Changelog v2.8.0", link: "/changelogs/v2.8.0" },
           { text: "Changelog v2.7.0", link: "/changelogs/v2.7.0" }
         ]
@@ -48,6 +49,7 @@ export default {
       {
         text: "Versions & Legal",
         items: [
+          { text: "Changelog v2.9.0", link: "/changelogs/v2.9.0" },
           { text: "Changelog v2.8.0", link: "/changelogs/v2.8.0" },
           { text: "Changelog v2.7.0", link: "/changelogs/v2.7.0" },
           { text: "Acknowledgements", link: "/acknowledgments" }

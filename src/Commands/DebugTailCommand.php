@@ -12,7 +12,7 @@ class DebugTailCommand extends Command
     /**
      * The name and signature of the console command.
      */
-    protected $signature = 'agent:debug-tail {--file= : Specific log file to tail}';
+    protected $signature = 'agent:debug-tail {--file= : Specific log file to tail} {--filter= : Stream only logs matching filter (errors, n+1, slow)}';
 
     /**
      * The console command description.
@@ -119,6 +119,39 @@ class DebugTailCommand extends Command
                 $queries[] = $trimmed;
             } elseif (str_contains($trimmed, 'Class: ') || str_contains($trimmed, 'Message: ') || str_contains($trimmed, 'File: ')) {
                 $exceptions[] = $trimmed;
+            }
+        }
+
+        // Apply stream filters
+        $filter = $this->option('filter');
+        if ($filter) {
+            $filter = strtolower($filter);
+            if ($filter === 'errors' && !$crashed && empty($exceptions)) {
+                return;
+            }
+            if ($filter === 'n+1') {
+                $hasNPlusOne = false;
+                foreach ($warnings as $w) {
+                    if (str_contains(strtolower($w), 'n+1')) {
+                        $hasNPlusOne = true;
+                        break;
+                    }
+                }
+                if (!$hasNPlusOne) {
+                    return;
+                }
+            }
+            if ($filter === 'slow') {
+                $hasSlow = false;
+                foreach ($queries as $q) {
+                    if (str_contains($q, 'slow query')) {
+                        $hasSlow = true;
+                        break;
+                    }
+                }
+                if (!$hasSlow) {
+                    return;
+                }
             }
         }
 

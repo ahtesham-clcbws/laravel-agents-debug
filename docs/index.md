@@ -2,7 +2,7 @@
 layout: home
 
 hero:
-  name: laravel-agents-debug
+  name: Laravel Agent-Debugger
   text: Zero-JS, High-Fidelity Diagnostics
   tagline: A premium server-driven diagnostics and profiling suite for Laravel 12.x/13.x
   actions:

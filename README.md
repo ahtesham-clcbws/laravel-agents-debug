@@ -9,6 +9,7 @@ A Zero‑JS, high‑fidelity server‑side diagnostics & profiling suite for Lar
 - **Configuration & Deployment** – https://ahtesham-clcbws.github.io/laravel-agents-debug/configuration
 - **Artisan CLI Guide** – https://ahtesham-clcbws.github.io/laravel-agents-debug/artisan
 - **Log Schema** – https://ahtesham-clcbws.github.io/laravel-agents-debug/schema
+- **Changelog v2.9.0** – https://ahtesham-clcbws.github.io/laravel-agents-debug/changelogs/v2.9.0
 - **Changelog v2.8.0** – https://ahtesham-clcbws.github.io/laravel-agents-debug/changelogs/v2.8.0
 - **Changelog v2.7.0** – https://ahtesham-clcbws.github.io/laravel-agents-debug/changelogs/v2.7.0
 

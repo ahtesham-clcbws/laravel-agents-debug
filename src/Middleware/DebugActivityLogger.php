@@ -243,8 +243,23 @@ class DebugActivityLogger
         $crashedSuffix = $response->getStatusCode() >= 500 ? ' (CRASHED)' : '';
         $statusCode = $response->getStatusCode() . $crashedSuffix;
 
+        $isCrashed = $response->getStatusCode() >= 500;
+        $queriesCount = count($this->manager->getQueries());
+        $errorsCount = count($this->manager->getExceptions());
+
         $log = [];
         $log[] = str_repeat('=', 80);
+        $log[] = "---";
+        $log[] = "timestamp: \"{$timestamp}\"";
+        $log[] = "method: \"{$method}\"";
+        $log[] = "url: \"{$url}\"";
+        $log[] = "status: " . $response->getStatusCode();
+        $log[] = "execution_time_ms: {$duration}";
+        $log[] = "memory_peak_mb: {$memory}";
+        $log[] = "crashed: " . ($isCrashed ? 'true' : 'false');
+        $log[] = "queries_count: {$queriesCount}";
+        $log[] = "errors_count: {$errorsCount}";
+        $log[] = "---";
         $log[] = "[{$timestamp}] REQUEST: {$method} {$url}";
         $log[] = "IP: {$ip} | Auth: {$userString} | Execution: {$duration}ms | Memory Peak: {$memory} MB";
         $log[] = "Route Action: {$routeAction}";
