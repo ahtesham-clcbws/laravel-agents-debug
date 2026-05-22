@@ -266,3 +266,21 @@ Spans named by the developer alongside timing metrics:
 
 ### How It Works
 The helper `debug_span($name, $callback)` records the current time, runs the closure, calculates the difference, and appends the result to our central state singleton registry (`DebugLoggerManager`), compiling them into final logs.
+
+---
+
+## SPA, Inertia.js, & REST API Compatibility 🚀
+
+### The Problem
+Popular packages like Laravel Debugbar or custom visual injectors append massive inline `<script>` tags or HTML panels to the bottom of HTTP responses. While this works for traditional multi-page apps (MPAs), it completely breaks:
+*   **Inertia.js AJAX Page Swaps**: Disrupts JSON hydration and throws console parsing exceptions.
+*   **REST APIs / Mobile Client endpoints**: Appends HTML junk to JSON arrays, corrupting structural clients.
+*   **Livewire & Alpine.js**: Interferes with DOM diffing algorithms, triggering state corruption.
+
+### The Solution
+**Laravel Agent-Debugger** solves this by keeping a **Zero-JS footprint** on AJAX/API requests:
+1.  **Response Filter**: The floating glassmorphic Viewport Status Badge is **only** injected when the request is a standard, non-AJAX `text/html` document.
+2.  **AJAX & API Isolation**: If a request is an Inertia.js page swap (`X-Inertia` header present) or returns `application/json`, the badge injection is cleanly bypassed.
+3.  **High-Fidelity Offline Logs**: All profile events (database transactions, caught exceptions, execution milestones, breadcrumbs) are still recorded silently in `agent_debug.log` and the local dashboard.
+
+This guarantees that your Inertia.js router remains 100% stable while you enjoy complete diagnostic visibility!
