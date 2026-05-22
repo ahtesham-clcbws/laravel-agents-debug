@@ -1,9 +1,9 @@
 export default {
   title: "Laravel Agent-Debugger",
   description: "A Zero-JS, High-Fidelity Server-Side Diagnostics & Profiling Suite.",
-  base: "/laravel-agent-debugger/",
+  base: "/laravel-agents-debug/",
   head: [
-    ['link', { rel: 'icon', href: '/laravel-agent-debugger/favicon.png' }]
+    ['link', { rel: 'icon', href: '/laravel-agents-debug/favicon.png' }]
   ],
   themeConfig: {
     logo: '/logo.png',
@@ -22,7 +22,8 @@ export default {
       { 
         text: "Project History", 
         items: [
-          { text: "Changelog", link: "/changelogs/v2.7.0" }
+          { text: "Changelog v2.8.0", link: "/changelogs/v2.8.0" },
+          { text: "Changelog v2.7.0", link: "/changelogs/v2.7.0" }
         ]
       }
     ],
@@ -51,13 +52,14 @@ export default {
       {
         text: "Versions & Legal",
         items: [
+          { text: "Changelog v2.8.0", link: "/changelogs/v2.8.0" },
           { text: "Changelog v2.7.0", link: "/changelogs/v2.7.0" },
           { text: "Acknowledgements", link: "/acknowledgments" }
         ]
       }
     ],
     socialLinks: [
-      { icon: "github", link: "https://github.com/ahtesham-clcbws/laravel-agent-debugger" }
+      { icon: "github", link: "https://github.com/ahtesham-clcbws/laravel-agents-debug" }
     ]
   }
 }
