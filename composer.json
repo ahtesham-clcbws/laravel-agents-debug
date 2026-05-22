@@ -1,6 +1,6 @@
 {
   "name": "clcbws/laravel-agents-debug",
-  "version": "3.1.0",
+  "version": "3.1.1",
   "description": "A Zero-JS, High-Fidelity Server-Side Diagnostics & Profiling Suite for Laravel 12/13.",
   "type": "library",
   "license": "MIT",

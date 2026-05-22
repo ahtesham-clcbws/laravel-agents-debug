@@ -22,7 +22,7 @@
         <header class="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/80 backdrop-blur-md z-10">
             <div class="flex items-center space-x-3">
                 <span class="text-2xl font-bold bg-linear-to-r from-red-500 via-orange-400 to-yellow-500 bg-clip-text text-transparent">laravel-agents-debug</span>
-                <span class="px-2 py-0.5 text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700 rounded-full">v3.1.0</span>
+                <span class="px-2 py-0.5 text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700 rounded-full">v3.1.1</span>
             </div>
             
             <div class="flex items-center space-x-4">
