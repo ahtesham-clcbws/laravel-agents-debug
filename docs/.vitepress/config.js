@@ -9,7 +9,7 @@ export default {
         text: "Documentation", 
         items: [
           { text: "The Vision", link: "/vision" },
-          { text: "All Features (13+29)", link: "/features" },
+          { text: "All Features", link: "/features" },
           { text: "Config & Deployment", link: "/configuration" },
           { text: "Artisan CLI Guide", link: "/artisan" },
           { text: "Log Schema", link: "/schema" }
@@ -36,7 +36,7 @@ export default {
       {
         text: "Diagnostic Features",
         items: [
-          { text: "All 13+29 Features", link: "/features" },
+          { text: "All Features", link: "/features" },
           { text: "Log Output Schema", link: "/schema" }
         ]
       },
