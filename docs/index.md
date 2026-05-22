@@ -2,7 +2,7 @@
 layout: home
 
 hero:
-  name: Laravel Agent-Debugger
+  name: laravel-agents-debug
   text: Zero-JS, High-Fidelity Diagnostics
   tagline: A premium server-driven diagnostics and profiling suite for Laravel 12.x/13.x
   actions:
@@ -73,3 +73,5 @@ Activate live profiling immediately:
 ```bash
 php artisan agent:debug-on
 ```
+
+**Packagist**: https://packagist.org/packages/clcbws/laravel-agents-debug
