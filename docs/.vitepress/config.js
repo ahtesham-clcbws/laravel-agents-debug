@@ -9,6 +9,7 @@ export default {
         text: "Documentation", 
         items: [
           { text: "The Vision", link: "/vision" },
+          { text: "Visual Dashboard", link: "/dashboard" },
           { text: "All Features", link: "/features" },
           { text: "Config & Deployment", link: "/configuration" },
           { text: "Artisan CLI Guide", link: "/artisan" },
@@ -30,7 +31,8 @@ export default {
         text: "Introduction",
         items: [
           { text: "Home & Intro", link: "/" },
-          { text: "The Vision", link: "/vision" }
+          { text: "The Vision", link: "/vision" },
+          { text: "Visual Dashboard", link: "/dashboard" }
         ]
       },
       {

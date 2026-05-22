@@ -25,6 +25,16 @@ class ViewportBorderInjector
             return $response;
         }
 
+        // Do not inject on AJAX, JSON, package's own routes, or SPA request headers
+        if ($request->is('_agent_debug*') ||
+            $request->ajax() ||
+            $request->expectsJson() ||
+            $request->hasHeader('X-Inertia') ||
+            $request->hasHeader('X-Livewire')
+        ) {
+            return $response;
+        }
+
         // Only inject on HTML standard response payloads
         $contentType = $response->headers->get('Content-Type') ?? '';
         if (!str_contains(strtolower($contentType), 'text/html')) {

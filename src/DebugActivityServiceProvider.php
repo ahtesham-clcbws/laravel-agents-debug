@@ -4,20 +4,20 @@ declare(strict_types=1);
 
 namespace LaravelAgentDebugger;
 
-use Illuminate\Support\ServiceProvider;
 use Illuminate\Contracts\Http\Kernel;
-use LaravelAgentDebugger\Commands\DebugOnCommand;
-use LaravelAgentDebugger\Commands\DebugOffCommand;
-use LaravelAgentDebugger\Commands\DebugStatusCommand;
+use Illuminate\Support\ServiceProvider;
 use LaravelAgentDebugger\Commands\DebugCleanCommand;
-use LaravelAgentDebugger\Commands\DebugTailCommand;
+use LaravelAgentDebugger\Commands\DebugOffCommand;
+use LaravelAgentDebugger\Commands\DebugOnCommand;
 use LaravelAgentDebugger\Commands\DebugRecordCommand;
-use LaravelAgentDebugger\Middleware\DebugActivityLogger;
-use LaravelAgentDebugger\Middleware\ViewportBorderInjector;
-use LaravelAgentDebugger\Controllers\DashboardController;
+use LaravelAgentDebugger\Commands\DebugStatusCommand;
+use LaravelAgentDebugger\Commands\DebugTailCommand;
 use LaravelAgentDebugger\Controllers\ArtisanController;
+use LaravelAgentDebugger\Controllers\DashboardController;
 use LaravelAgentDebugger\Controllers\DatabaseController;
 use LaravelAgentDebugger\Controllers\MocksController;
+use LaravelAgentDebugger\Middleware\DebugActivityLogger;
+use LaravelAgentDebugger\Middleware\ViewportBorderInjector;
 
 /**
  * Service provider to bootstrap the package, config, routes, middleware, and command capabilities.
@@ -30,7 +30,7 @@ class DebugActivityServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->mergeConfigFrom(
-            __DIR__ . '/../config/agent-debugger.php',
+            __DIR__.'/../config/agent-debugger.php',
             'agent-debugger'
         );
 
@@ -48,7 +48,7 @@ class DebugActivityServiceProvider extends ServiceProvider
 
         if ($this->app->runningInConsole()) {
             $this->publishes([
-                __DIR__ . '/../config/agent-debugger.php' => config_path('agent-debugger.php'),
+                __DIR__.'/../config/agent-debugger.php' => config_path('agent-debugger.php'),
             ], 'agent-debugger-config');
 
             $this->commands([
@@ -63,11 +63,11 @@ class DebugActivityServiceProvider extends ServiceProvider
             $this->autoCleanLogsOnServe();
         }
 
-        if (!config('agent-debugger.enabled', false)) {
+        if (! config('agent-debugger.enabled', false)) {
             return;
         }
 
-        $this->loadViewsFrom(__DIR__ . '/../resources/views', 'agent-debugger');
+        $this->loadViewsFrom(__DIR__.'/../resources/views', 'agent-debugger');
 
         $this->registerRoutes();
 
@@ -75,8 +75,12 @@ class DebugActivityServiceProvider extends ServiceProvider
             $kernel->prependMiddleware(DebugActivityLogger::class);
         }
 
-        if (config('agent-debugger.show_frontend_indicator', true) && method_exists($kernel, 'appendMiddleware')) {
-            $kernel->appendMiddleware(ViewportBorderInjector::class);
+        if (config('agent-debugger.show_frontend_indicator', true)) {
+            if (method_exists($kernel, 'appendMiddleware')) {
+                $kernel->appendMiddleware(ViewportBorderInjector::class);
+            } elseif (method_exists($kernel, 'pushMiddleware')) {
+                $kernel->pushMiddleware(ViewportBorderInjector::class);
+            }
         }
     }
 
@@ -87,8 +91,8 @@ class DebugActivityServiceProvider extends ServiceProvider
     {
         $mocksFile = storage_path('logs/agent-debugger/mocks.json');
         if (file_exists($mocksFile)) {
-            $mocks = json_decode((string)file_get_contents($mocksFile), true) ?: [];
-            if (!empty($mocks)) {
+            $mocks = json_decode((string) file_get_contents($mocksFile), true) ?: [];
+            if (! empty($mocks)) {
                 $fakeRules = [];
                 foreach ($mocks as $m) {
                     $url = $m['url_pattern'] ?? '';
@@ -100,7 +104,7 @@ class DebugActivityServiceProvider extends ServiceProvider
                         );
                     }
                 }
-                if (!empty($fakeRules)) {
+                if (! empty($fakeRules)) {
                     \Illuminate\Support\Facades\Http::fake($fakeRules);
                 }
             }
@@ -112,7 +116,7 @@ class DebugActivityServiceProvider extends ServiceProvider
      */
     protected function autoCleanLogsOnServe(): void
     {
-        if (!config('agent-debugger.auto_clean_debug', true)) {
+        if (! config('agent-debugger.auto_clean_debug', true)) {
             return;
         }
 
@@ -129,17 +133,17 @@ class DebugActivityServiceProvider extends ServiceProvider
             $logPath = config('agent-debugger.log_path', storage_path('logs'));
             $logStyle = config('agent-debugger.log_style', 'date-wise');
 
-            if (!is_dir($logPath)) {
+            if (! is_dir($logPath)) {
                 return;
             }
 
             if ($logStyle === 'single') {
-                $target = $logPath . '/agent_debug.log';
+                $target = $logPath.'/agent_debug.log';
                 if (file_exists($target)) {
                     file_put_contents($target, '');
                 }
             } else {
-                $files = glob($logPath . '/agent_debug-*.log');
+                $files = glob($logPath.'/agent_debug-*.log');
                 if (is_array($files)) {
                     foreach ($files as $file) {
                         if (file_exists($file)) {
@@ -149,7 +153,7 @@ class DebugActivityServiceProvider extends ServiceProvider
                 }
             }
 
-            $inertiaFiles = glob($logPath . '/agent-debugger/inertia/*.json');
+            $inertiaFiles = glob($logPath.'/agent-debugger/inertia/*.json');
             if (is_array($inertiaFiles)) {
                 foreach ($inertiaFiles as $file) {
                     if (file_exists($file)) {

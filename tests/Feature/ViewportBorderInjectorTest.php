@@ -49,4 +49,83 @@ class ViewportBorderInjectorTest extends TestCase
 
         $this->assertStringNotContainsString('id="agent-debugger-badge"', $content);
     }
+
+    /** @test */
+    public function test_it_ignores_dashboard_routes()
+    {
+        config(['agent-debugger.show_frontend_indicator' => true]);
+
+        $request = Request::create('/_agent_debug/dashboard', 'GET');
+        $middleware = new ViewportBorderInjector();
+
+        $response = $middleware->handle($request, function () {
+            $resp = new Response('<html><body>Dashboard Content</body></html>');
+            $resp->headers->set('Content-Type', 'text/html');
+            return $resp;
+        });
+
+        $content = $response->getContent();
+
+        $this->assertStringNotContainsString('id="agent-debugger-badge"', $content);
+    }
+
+    /** @test */
+    public function test_it_ignores_ajax_requests()
+    {
+        config(['agent-debugger.show_frontend_indicator' => true]);
+
+        $request = Request::create('/test-page', 'GET');
+        $request->headers->set('X-Requested-With', 'XMLHttpRequest');
+        $middleware = new ViewportBorderInjector();
+
+        $response = $middleware->handle($request, function () {
+            $resp = new Response('<html><body>AJAX Content</body></html>');
+            $resp->headers->set('Content-Type', 'text/html');
+            return $resp;
+        });
+
+        $content = $response->getContent();
+
+        $this->assertStringNotContainsString('id="agent-debugger-badge"', $content);
+    }
+
+    /** @test */
+    public function test_it_ignores_inertia_requests()
+    {
+        config(['agent-debugger.show_frontend_indicator' => true]);
+
+        $request = Request::create('/test-page', 'GET');
+        $request->headers->set('X-Inertia', 'true');
+        $middleware = new ViewportBorderInjector();
+
+        $response = $middleware->handle($request, function () {
+            $resp = new Response('<html><body>Inertia Content</body></html>');
+            $resp->headers->set('Content-Type', 'text/html');
+            return $resp;
+        });
+
+        $content = $response->getContent();
+
+        $this->assertStringNotContainsString('id="agent-debugger-badge"', $content);
+    }
+
+    /** @test */
+    public function test_it_ignores_livewire_requests()
+    {
+        config(['agent-debugger.show_frontend_indicator' => true]);
+
+        $request = Request::create('/test-page', 'GET');
+        $request->headers->set('X-Livewire', 'true');
+        $middleware = new ViewportBorderInjector();
+
+        $response = $middleware->handle($request, function () {
+            $resp = new Response('<html><body>Livewire Content</body></html>');
+            $resp->headers->set('Content-Type', 'text/html');
+            return $resp;
+        });
+
+        $content = $response->getContent();
+
+        $this->assertStringNotContainsString('id="agent-debugger-badge"', $content);
+    }
 }
