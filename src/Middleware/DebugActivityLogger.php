@@ -326,6 +326,16 @@ class DebugActivityLogger
         $log[] = "- INCOMING REQUEST PAYLOAD:";
         $log[] = json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
+        // Process Inertia Properties
+        $inertiaMeta = $this->processInertiaPayload($request, $response);
+        if ($inertiaMeta) {
+            $log[] = "";
+            $log[] = "- INERTIA STATE DUMP:";
+            $log[] = "  * Component: {$inertiaMeta['component']}";
+            $log[] = "  * URL: {$inertiaMeta['url']}";
+            $log[] = "  * Payload Link: {$inertiaMeta['file_link']}";
+        }
+
         // SQL Database transaction actions and Queries
         $queries = $this->manager->getQueries();
         $transactions = $this->manager->getTransactions();
@@ -518,5 +528,61 @@ class DebugActivityLogger
         }
 
         file_put_contents($filePath, $content, FILE_APPEND);
+    }
+
+    /**
+     * Extracts and dumps full untruncated Inertia props to separate JSON files inside a subfolder
+     */
+    protected function processInertiaPayload(Request $request, Response $response): ?array
+    {
+        $inertiaData = null;
+
+        // Check JSON Inertia Page Swap response
+        if ($request->hasHeader('X-Inertia')) {
+            if ($response instanceof \Symfony\Component\HttpFoundation\JsonResponse) {
+                $data = json_decode($response->getContent() ?: '', true);
+                if (is_array($data) && isset($data['component']) && isset($data['props'])) {
+                    $inertiaData = $data;
+                }
+            }
+        } else {
+            // First load or full page reload of Inertia.js views
+            $html = $response->getContent();
+            if (is_string($html) && preg_match('/data-page="([^"]+)"/', $html, $matches)) {
+                $decodedJson = json_decode(html_entity_decode($matches[1]), true);
+                if (is_array($decodedJson) && isset($decodedJson['component']) && isset($decodedJson['props'])) {
+                    $inertiaData = $decodedJson;
+                }
+            }
+        }
+
+        if (!$inertiaData) {
+            return null;
+        }
+
+        // Redact props securely
+        if (isset($inertiaData['props']) && is_array($inertiaData['props'])) {
+            $inertiaData['props'] = $this->redactArray($inertiaData['props']);
+        }
+
+        // Create log path directory
+        $logPath = config('agent-debugger.log_path', storage_path('logs'));
+        $inertiaDir = $logPath . '/agent-debugger/inertia';
+        if (!is_dir($inertiaDir)) {
+            mkdir($inertiaDir, 0755, true);
+        }
+
+        // Save Inertia properties to separate file
+        $requestId = uniqid();
+        $filename = "inertia_req_{$requestId}.json";
+        $filePath = $inertiaDir . '/' . $filename;
+        
+        file_put_contents($filePath, json_encode($inertiaData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+        return [
+            'component' => $inertiaData['component'],
+            'url' => $inertiaData['url'] ?? $request->getRequestUri(),
+            'file_link' => 'file://' . $filePath
+        ];
     }
 }

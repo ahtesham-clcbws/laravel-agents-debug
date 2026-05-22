@@ -54,6 +54,16 @@ class DebugCleanCommand extends Command
                 $this->info("Purged single log file because it was older than {$daysLimit} days.");
             }
 
+            // Clean Inertia payload logs older than X days
+            $inertiaFiles = glob($logPath . '/agent-debugger/inertia/*.json');
+            if (is_array($inertiaFiles)) {
+                foreach ($inertiaFiles as $file) {
+                    if (file_exists($file) && filemtime($file) < $cutoffTime) {
+                        unlink($file);
+                    }
+                }
+            }
+
             $this->info("🧹 Purged {$count} daily log files older than {$daysLimit} days.");
             return Command::SUCCESS;
         }
@@ -72,6 +82,16 @@ class DebugCleanCommand extends Command
                 if (file_exists($file)) {
                     unlink($file);
                     $count++;
+                }
+            }
+        }
+
+        // Clean all Inertia payload logs
+        $inertiaFiles = glob($logPath . '/agent-debugger/inertia/*.json');
+        if (is_array($inertiaFiles)) {
+            foreach ($inertiaFiles as $file) {
+                if (file_exists($file)) {
+                    unlink($file);
                 }
             }
         }

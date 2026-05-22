@@ -7,6 +7,7 @@
 # Temporary storage files
 /storage/logs/agent_debug*.log
 /storage/logs/agent_debug*.bak
+/storage/logs/agent-debugger/
 
 # VSCode Workspace files
 .vscode/
@@ -16,3 +17,4 @@ Local_Debug_Activity.code-workspace
 .env
 .env.backup
 .agents
+project_testing

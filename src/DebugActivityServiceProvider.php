@@ -123,6 +123,16 @@ class DebugActivityServiceProvider extends ServiceProvider
                     }
                 }
             }
+
+            // Clean all Inertia payload logs on serve startup
+            $inertiaFiles = glob($logPath . '/agent-debugger/inertia/*.json');
+            if (is_array($inertiaFiles)) {
+                foreach ($inertiaFiles as $file) {
+                    if (file_exists($file)) {
+                        unlink($file);
+                    }
+                }
+            }
         }
     }
 
@@ -174,6 +184,14 @@ class DebugActivityServiceProvider extends ServiceProvider
             if (preg_match('/queries_count:\s*(\d+)/', $block, $m)) $queriesCount = (int)$m[1];
             if (preg_match('/errors_count:\s*(\d+)/', $block, $m)) $errorsCount = (int)$m[1];
 
+            $inertiaData = null;
+            if (preg_match('/Payload Link:\s*(file:\/\/.*?\.json)/', $block, $m)) {
+                $realPath = str_replace('file://', '', $m[1]);
+                if (file_exists($realPath)) {
+                    $inertiaData = json_decode(file_get_contents($realPath), true);
+                }
+            }
+
             $parsed[] = [
                 'timestamp' => $timestamp,
                 'method' => $method,
@@ -184,6 +202,7 @@ class DebugActivityServiceProvider extends ServiceProvider
                 'crashed' => $crashed,
                 'queries_count' => $queriesCount,
                 'errors_count' => $errorsCount,
+                'inertia_data' => $inertiaData,
                 'raw' => $block
             ];
         }
@@ -299,9 +318,29 @@ class DebugActivityServiceProvider extends ServiceProvider
                         </div>
                     </div>
 
+                    <!-- Tab Switcher (Inertia only) -->
+                    <div v-if="selectedLog.inertia_data" class="px-6 py-2 bg-slate-900/40 border-b border-slate-800 flex space-x-4">
+                        <button @click="activeTab = 'log'" :class="activeTab === 'log' ? 'border-red-500 text-red-400 font-bold' : 'border-transparent text-slate-400 hover:text-slate-200'" class="py-2 px-1 border-b-2 text-sm transition-all duration-150">📜 Execution Log</button>
+                        <button @click="activeTab = 'inertia'" :class="activeTab === 'inertia' ? 'border-red-500 text-red-400 font-bold' : 'border-transparent text-slate-400 hover:text-slate-200'" class="py-2 px-1 border-b-2 text-sm transition-all duration-150">📦 Inertia Properties</button>
+                    </div>
+
                     <!-- Raw Formatted Output Block -->
-                    <div class="flex-1 p-6 overflow-auto bg-slate-950/40">
+                    <div v-if="activeTab === 'log'" class="flex-1 p-6 overflow-auto bg-slate-950/40">
                         <pre class="text-sm text-slate-300 leading-relaxed font-mono whitespace-pre-wrap selection:bg-red-500/30 selection:text-white" v-html="highlightedContent"></pre>
+                    </div>
+
+                    <!-- Inertia Props Tab -->
+                    <div v-if="activeTab === 'inertia' && selectedLog.inertia_data" class="flex-1 p-6 overflow-auto bg-slate-950/40 font-mono text-sm">
+                        <div class="mb-4">
+                            <span class="text-slate-500">Component:</span> <span class="text-white font-bold">{{ selectedLog.inertia_data.component }}</span>
+                        </div>
+                        <div class="mb-4">
+                            <span class="text-slate-500">URL:</span> <span class="text-cyan-400 font-bold">{{ selectedLog.inertia_data.url }}</span>
+                        </div>
+                        <div class="border border-slate-800 rounded-lg bg-slate-900/60 p-4">
+                            <div class="text-slate-400 font-bold mb-2">View Props Payload:</div>
+                            <pre class="text-green-400 font-mono whitespace-pre-wrap select-all">{{ JSON.stringify(selectedLog.inertia_data.props, null, 2) }}</pre>
+                        </div>
                     </div>
                 </div>
                 
@@ -324,6 +363,8 @@ class DebugActivityServiceProvider extends ServiceProvider
                 const isPolling = ref(true);
                 let pollInterval = null;
 
+                const activeTab = ref('log');
+
                 const fetchLogs = async () => {
                     try {
                         const res = await fetch('/_agent_debug/logs');
@@ -339,6 +380,7 @@ class DebugActivityServiceProvider extends ServiceProvider
 
                 const selectLog = (log) => {
                     selectedLog.value = log;
+                    activeTab.value = 'log';
                 };
 
                 const togglePolling = () => {
@@ -434,6 +476,7 @@ class DebugActivityServiceProvider extends ServiceProvider
                 };
 
                 return {
+                    activeTab,
                     logs,
                     selectedLog,
                     search,

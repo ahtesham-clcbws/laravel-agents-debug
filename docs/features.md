@@ -269,7 +269,7 @@ The helper `debug_span($name, $callback)` records the current time, runs the clo
 
 ---
 
-## SPA, Inertia.js, & REST API Compatibility 🚀
+## 13. SPA, Inertia.js, & REST API Compatibility 🚀
 
 ### The Problem
 Popular packages like Laravel Debugbar or custom visual injectors append massive inline `<script>` tags or HTML panels to the bottom of HTTP responses. While this works for traditional multi-page apps (MPAs), it completely breaks:
