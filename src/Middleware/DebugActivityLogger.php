@@ -77,6 +77,7 @@ class DebugActivityLogger
 
         // Perform active environment services configuration shield audits
         $this->manager->auditEnvironmentServices();
+        $this->manager->auditEnvFile();
 
         // Capture User authentication details
         $this->resolveAuthenticatedUser();
@@ -260,6 +261,11 @@ class DebugActivityLogger
         $cacheActionsCount = count($this->manager->getCacheActions());
         $eloquentEventsCount = count($this->manager->getEloquentEvents());
 
+        $csrfState = $this->manager->getCsrfState();
+        $csrfChecked = $csrfState['checked'] ? 'true' : 'false';
+        $csrfPassed = $csrfState['passed'] ? 'true' : 'false';
+        $csrfReason = $csrfState['reason'] ? "\"{$csrfState['reason']}\"" : 'null';
+
         $log = [];
         $log[] = str_repeat('=', 80);
         $log[] = "---";
@@ -274,6 +280,9 @@ class DebugActivityLogger
         $log[] = "errors_count: {$errorsCount}";
         $log[] = "cache_actions_count: {$cacheActionsCount}";
         $log[] = "eloquent_events_count: {$eloquentEventsCount}";
+        $log[] = "csrf_checked: {$csrfChecked}";
+        $log[] = "csrf_passed: {$csrfPassed}";
+        $log[] = "csrf_reason: {$csrfReason}";
         $log[] = "---";
         $log[] = "[{$timestamp}] REQUEST: {$method} {$url}";
         $log[] = "IP: {$ip} | Auth: {$userString} | Execution: {$duration}ms | Memory Peak: {$memory} MB";
@@ -297,6 +306,16 @@ class DebugActivityLogger
             $log[] = "🚨 CONFIGURATION SHIELD - ACTIVE LOCAL SERVICES OFFLINE:";
             foreach ($warnings as $w) {
                 $log[] = "  * [{$w['service']}] {$w['message']}";
+            }
+        }
+
+        // .env vs .env.example Audit Drifts
+        $envDrifts = $this->manager->getEnvDrifts();
+        if (!empty($envDrifts)) {
+            $log[] = "";
+            $log[] = "⚖️ .ENV FILE DRIFTS DETECTED (MISSING KEYS):";
+            foreach ($envDrifts as $ed) {
+                $log[] = "  * [{$ed['status']}] {$ed['message']}";
             }
         }
 

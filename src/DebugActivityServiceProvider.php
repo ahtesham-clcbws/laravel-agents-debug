@@ -245,6 +245,31 @@ class DebugActivityServiceProvider extends ServiceProvider
                 }
             }
 
+            $csrfChecked = false;
+            $csrfPassed = true;
+            $csrfReason = null;
+            if (preg_match('/csrf_checked:\s*(true|false)/', $block, $m)) $csrfChecked = $m[1] === 'true';
+            if (preg_match('/csrf_passed:\s*(true|false)/', $block, $m)) $csrfPassed = $m[1] === 'true';
+            if (preg_match('/csrf_reason:\s*(.*?)(?=\n|$)/', $block, $m)) {
+                $reasonVal = trim($m[1], " \t\n\r\0\x0B\"");
+                $csrfReason = $reasonVal !== 'null' ? $reasonVal : null;
+            }
+
+            $envDrifts = [];
+            if (preg_match('/⚖️ \.ENV FILE DRIFTS DETECTED \(MISSING KEYS\):\s*((?:\s*\*.*?\n?)*)/', $block, $m)) {
+                $lines = explode("\n", trim($m[1]));
+                foreach ($lines as $line) {
+                    $line = trim($line);
+                    if (empty($line)) continue;
+                    if (preg_match('/^\*\s*\[(.*?)\]\s*(.*)/', $line, $lm)) {
+                        $envDrifts[] = [
+                            'status' => $lm[1],
+                            'message' => $lm[2]
+                        ];
+                    }
+                }
+            }
+
             $parsed[] = [
                 'timestamp' => $timestamp,
                 'method' => $method,
@@ -260,6 +285,10 @@ class DebugActivityServiceProvider extends ServiceProvider
                 'eloquent_events_count' => $eloquentEventsCount,
                 'eloquent_events' => $eloquentEvents,
                 'env_warnings' => $envWarnings,
+                'csrf_checked' => $csrfChecked,
+                'csrf_passed' => $csrfPassed,
+                'csrf_reason' => $csrfReason,
+                'env_drifts' => $envDrifts,
                 'inertia_data' => $inertiaData,
                 'raw' => $block
             ];
@@ -384,6 +413,30 @@ class DebugActivityServiceProvider extends ServiceProvider
                             <div class="text-xs mt-1 space-y-1">
                                 <div v-for="(warning, wIdx) in selectedLog.env_warnings" :key="wIdx">
                                     • <span class="font-semibold text-rose-100">[{{ warning.service }}]</span> {{ warning.message }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CSRF Token Validation Debugger Alert Banner -->
+                    <div v-if="selectedLog.csrf_checked && !selectedLog.csrf_passed" class="mx-6 mt-4 p-4 bg-amber-950/40 border border-amber-800/80 rounded-lg flex items-start space-x-3 text-amber-300">
+                        <span class="text-xl">🍪</span>
+                        <div>
+                            <div class="font-bold text-amber-200">CSRF Token Mismatch Alert (Potential 419 Page Expired)</div>
+                            <div class="text-xs mt-1 text-amber-400">
+                                {{ selectedLog.csrf_reason }} Ensure that your forms include a `@csrf` token directive or that your AJAX headers contain a valid `X-CSRF-TOKEN` or decrypted `X-XSRF-TOKEN` credential.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- .env vs .env.example Audit Warning Banner -->
+                    <div v-if="selectedLog.env_drifts && selectedLog.env_drifts.length > 0" class="mx-6 mt-4 p-4 bg-cyan-950/40 border border-cyan-800/80 rounded-lg flex items-start space-x-3 text-cyan-300">
+                        <span class="text-xl">⚖️</span>
+                        <div>
+                            <div class="font-bold text-cyan-200">.env / .env.example Configuration Divergence</div>
+                            <div class="text-xs mt-1 space-y-1">
+                                <div v-for="(drift, dIdx) in selectedLog.env_drifts" :key="dIdx">
+                                    • <span class="font-semibold text-cyan-100">[{{ drift.status }}]</span> {{ drift.message }}
                                 </div>
                             </div>
                         </div>

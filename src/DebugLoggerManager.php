@@ -264,4 +264,65 @@ class DebugLoggerManager
     {
         return $this->environmentWarnings;
     }
+
+    protected array $csrfState = [];
+
+    public function setCsrfState(array $state): void
+    {
+        $this->csrfState = $state;
+    }
+
+    public function getCsrfState(): array
+    {
+        return $this->csrfState;
+    }
+
+    protected array $envDrifts = [];
+
+    public function auditEnvFile(): void
+    {
+        $basePath = base_path();
+        $envPath = $basePath . '/.env';
+        $examplePath = $basePath . '/.env.example';
+
+        if (!file_exists($envPath) || !file_exists($examplePath)) {
+            return;
+        }
+
+        $envKeys = $this->parseEnvKeys($envPath);
+        $exampleKeys = $this->parseEnvKeys($examplePath);
+
+        foreach ($exampleKeys as $key) {
+            if (!in_array($key, $envKeys, true)) {
+                $this->envDrifts[] = [
+                    'key' => $key,
+                    'status' => 'MISSING',
+                    'message' => "Key '{$key}' is declared in .env.example but missing from your local .env file."
+                ];
+            }
+        }
+    }
+
+    protected function parseEnvKeys(string $path): array
+    {
+        $keys = [];
+        $lines = @file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [];
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if (empty($line) || str_starts_with($line, '#')) {
+                continue;
+            }
+            $parts = explode('=', $line, 2);
+            $key = trim($parts[0]);
+            if (!empty($key)) {
+                $keys[] = $key;
+            }
+        }
+        return array_unique($keys);
+    }
+
+    public function getEnvDrifts(): array
+    {
+        return $this->envDrifts;
+    }
 }

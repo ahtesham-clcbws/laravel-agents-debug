@@ -68,6 +68,38 @@ class SessionStateProfiler
             }
         }
 
+        $csrfDetails = [
+            'checked' => false,
+            'passed' => true,
+            'request_token' => null,
+            'session_token' => null,
+            'reason' => null
+        ];
+
+        if ($activeRequest && in_array($activeRequest->getMethod(), ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
+            $csrfDetails['checked'] = true;
+            $requestToken = $activeRequest->input('_token') ?: $activeRequest->header('X-CSRF-TOKEN');
+            if (!$requestToken && $activeRequest->header('X-XSRF-TOKEN')) {
+                try {
+                    $requestToken = decrypt($activeRequest->header('X-XSRF-TOKEN'), false);
+                } catch (\Throwable $e) {
+                }
+            }
+            $sessionToken = $activeRequest->hasSession() ? $activeRequest->session()->token() : null;
+
+            $csrfDetails['request_token'] = $requestToken;
+            $csrfDetails['session_token'] = $sessionToken;
+
+            if (empty($sessionToken)) {
+                $csrfDetails['passed'] = false;
+                $csrfDetails['reason'] = 'Session is not initialized or token is missing.';
+            } elseif ($requestToken !== $sessionToken) {
+                $csrfDetails['passed'] = false;
+                $csrfDetails['reason'] = 'The request token does not match the active session token.';
+            }
+        }
+        $this->manager->setCsrfState($csrfDetails);
+
         $this->manager->setSessionState($filtered);
     }
 }
